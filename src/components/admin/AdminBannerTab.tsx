@@ -1,6 +1,6 @@
 import React from 'react';
 import { SchoolConfig } from '../../types';
-import { Sparkles, Image as ImageIcon, Sliders, Plus, Trash2, Layers, AlignLeft, AlignCenter, AlignRight, MoveVertical, Play } from 'lucide-react';
+import { Sparkles, Image as ImageIcon, Sliders, Plus, Trash2, Layers, AlignLeft, AlignCenter, AlignRight, MoveVertical, Play, Palette } from 'lucide-react';
 import { ImageUploadButton } from './ImageUploadButton';
 import { AutoResizeTextarea } from '../common/AutoResizeTextarea';
 
@@ -11,6 +11,8 @@ interface AdminBannerTabProps {
 
 export const AdminBannerTab: React.FC<AdminBannerTabProps> = ({ config, onChange }) => {
   const { header } = config;
+  const bannerOverlayColor = config.themeConfig?.bannerOverlayColor || '#0f172a';
+  const bannerOverlayOpacity = typeof config.themeConfig?.bannerOverlayOpacity === 'number' ? config.themeConfig.bannerOverlayOpacity : 45;
 
   const updateHeader = (key: keyof typeof header, value: any) => {
     onChange({
@@ -18,6 +20,16 @@ export const AdminBannerTab: React.FC<AdminBannerTabProps> = ({ config, onChange
       header: {
         ...header,
         [key]: value,
+      },
+    });
+  };
+
+  const updateThemeConfig = (updates: Partial<typeof config.themeConfig>) => {
+    onChange({
+      ...config,
+      themeConfig: {
+        ...config.themeConfig,
+        ...updates,
       },
     });
   };
@@ -379,6 +391,73 @@ export const AdminBannerTab: React.FC<AdminBannerTabProps> = ({ config, onChange
                 <option value="center">Di Tengah (Center)</option>
                 <option value="bottom">Bagian Bawah (Bottom)</option>
               </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Pengaturan Warna & Opacity Gradasi Latar Banner */}
+        <div className="space-y-4 pt-3 border-t border-slate-100">
+          <div className="flex items-center justify-between">
+            <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <Palette className="w-3.5 h-3.5 text-blue-600" />
+              <span>Warna &amp; Opacity Gradasi Latar Banner</span>
+            </h4>
+            <span className="text-[11px] font-semibold text-slate-500">
+              Menutupi separuh gambar secara halus
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Pilihan Warna Gradasi */}
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
+              <label className="block text-xs font-bold text-slate-700">
+                Warna Gradasi Latar Banner
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={bannerOverlayColor}
+                  onChange={(e) => updateThemeConfig({ bannerOverlayColor: e.target.value })}
+                  className="w-10 h-10 rounded-lg border border-slate-300 cursor-pointer p-0.5 bg-white shadow-2xs"
+                />
+                <input
+                  type="text"
+                  value={bannerOverlayColor}
+                  onChange={(e) => updateThemeConfig({ bannerOverlayColor: e.target.value })}
+                  className="flex-1 px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-800 bg-white"
+                  placeholder="#0f172a"
+                />
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Warna dasar gradasi penutup separuh gambar banner di belakang teks.
+              </p>
+            </div>
+
+            {/* Pengaturan Tingkat Opacity */}
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700">
+                  Tingkat Opacity Gradasi
+                </label>
+                <span className="text-xs font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                  {bannerOverlayOpacity}%
+                </span>
+              </div>
+              <div className="flex items-center gap-3 pt-1">
+                <span className="text-[11px] text-slate-400 font-bold shrink-0">0% (Bening)</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={bannerOverlayOpacity}
+                  onChange={(e) => updateThemeConfig({ bannerOverlayOpacity: parseInt(e.target.value, 10) })}
+                  className="w-full accent-blue-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
+                />
+                <span className="text-[11px] text-slate-400 font-bold shrink-0">100% (Pekat)</span>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Semakin tinggi nilai %, gradasi semakin pekat menutupi separuh gambar agar teks lebih terbaca.
+              </p>
             </div>
           </div>
         </div>

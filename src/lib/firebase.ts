@@ -518,10 +518,12 @@ export async function saveSchoolTabConfig(tab: string, config: SchoolConfig): Pr
   let tabPayload: Record<string, unknown> = {};
 
   switch (tab) {
+    case 'banner':
     case 'header':
       tabPayload = {
         header: config.header,
         identity: config.identity,
+        themeConfig: config.themeConfig,
       };
       break;
     case 'menus':

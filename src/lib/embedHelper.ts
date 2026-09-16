@@ -164,19 +164,8 @@ export function convertToGoogleMapsEmbedUrl(
     };
   }
 
-  // 3. If it's for SMP Negeri 1 Bengkalis (including old legacy output=embed that failed on desktop)
-  if (/smp\s*n(?:egeri)?\s*1.*bengkalis|bengkalis.*smp\s*n(?:egeri)?\s*1/i.test(raw)) {
-    return {
-      embedUrl: raw,
-      sourceType: 'embed_url',
-      detectedLocation: 'SMP Negeri 1 Bengkalis, Jl. Karimun',
-      isValid: true,
-      notes: 'Menggunakan URL peta custom SMP Negeri 1 Bengkalis tersimpan.',
-    };
-  }
-
-  // 4. Already has output=embed
-  if (raw.includes('output=embed')) {
+  // 3. Already has output=embed and starts with http/https
+  if (raw.includes('output=embed') && (raw.startsWith('http://') || raw.startsWith('https://'))) {
     const qMatch = raw.match(/[?&]q=([^&]+)/i);
     const detectedLocation = qMatch ? decodeURIComponent(qMatch[1].replace(/\+/g, ' ')) : undefined;
     return {
@@ -243,21 +232,12 @@ export function convertToGoogleMapsEmbedUrl(
   // 8. Short links (maps.app.goo.gl/... or goo.gl/maps/...)
   if (raw.includes('maps.app.goo.gl') || raw.includes('goo.gl/maps')) {
     const loc = fallbackAddress && fallbackAddress.trim() ? fallbackAddress.trim() : raw;
-    if (/smp\s*n(?:egeri)?\s*1|bengkalis/i.test(loc)) {
-      return {
-        embedUrl: OFFICIAL_SMPN1_MAP_EMBED_URL,
-        sourceType: 'embed_url',
-        detectedLocation: 'SMP Negeri 1 Bengkalis',
-        isValid: true,
-        notes: 'Peta resmi SMP Negeri 1 Bengkalis aktif.',
-      };
-    }
     return {
       embedUrl: `https://maps.google.com/maps?q=${encodeURIComponent(loc)}&t=&z=16&ie=UTF8&iwloc=&output=embed`,
       sourceType: 'short_link',
       detectedLocation: loc,
       isValid: true,
-      notes: 'Tautan bagikan Google Maps terdeteksi. Peta interaktif diaktifkan menggunakan alamat/lokasi sekolah.',
+      notes: 'Tautan bagikan Google Maps terdeteksi. Peta interaktif diaktifkan.',
     };
   }
 
@@ -272,16 +252,6 @@ export function convertToGoogleMapsEmbedUrl(
   }
 
   // 10. Plain address or location name entered
-  if (/smp\s*n(?:egeri)?\s*1|bengkalis/i.test(raw)) {
-    return {
-      embedUrl: OFFICIAL_SMPN1_MAP_EMBED_URL,
-      sourceType: 'embed_url',
-      detectedLocation: 'SMP Negeri 1 Bengkalis',
-      isValid: true,
-      notes: 'Peta resmi SMP Negeri 1 Bengkalis aktif.',
-    };
-  }
-
   return {
     embedUrl: `https://maps.google.com/maps?q=${encodeURIComponent(raw)}&t=&z=16&ie=UTF8&iwloc=&output=embed`,
     sourceType: 'plain_address',
@@ -296,7 +266,7 @@ export function convertToGoogleMapsEmbedUrl(
  */
 export function buildGoogleMapsEmbedUrl(query: string, zoom: number = 16): string {
   const cleanQuery = query.trim();
-  if (!cleanQuery || /smp\s*n(?:egeri)?\s*1|bengkalis/i.test(cleanQuery)) {
+  if (!cleanQuery) {
     return OFFICIAL_SMPN1_MAP_EMBED_URL;
   }
   const clampedZoom = Math.max(1, Math.min(21, Math.round(zoom)));
@@ -319,5 +289,86 @@ export function extractMapDetails(url?: string, defaultFallbackQuery?: string): 
   }
   const zoom = zMatch ? parseInt(zMatch[1], 10) : 16;
   return { query, zoom: isNaN(zoom) ? 16 : zoom };
+}
+
+export interface CoordinatesAndZoom {
+  lat: number;
+  lng: number;
+  zoom: number;
+}
+
+/**
+ * Parses coordinates and zoom level from any Google Maps URL, embed code, or coordinates string.
+ */
+export function parseCoordinatesAndZoom(url?: string): CoordinatesAndZoom {
+  const defaultCoord: CoordinatesAndZoom = {
+    lat: 1.473599,
+    lng: 102.111425,
+    zoom: 17,
+  };
+
+  if (!url || !url.trim()) return defaultCoord;
+
+  const text = url.trim();
+
+  // 1. Direct coordinates "lat, lng" or "lat,lng"
+  const directMatch = text.match(/^(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)(?:\s*,\s*(\d+))?$/);
+  if (directMatch) {
+    const lat = parseFloat(directMatch[1]);
+    const lng = parseFloat(directMatch[2]);
+    const zoom = directMatch[3] ? parseInt(directMatch[3], 10) : 17;
+    if (!isNaN(lat) && !isNaN(lng)) return { lat, lng, zoom: isNaN(zoom) ? 17 : zoom };
+  }
+
+  // 2. Query ?q=lat,lng
+  const qMatch = text.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/i);
+  const zMatch = text.match(/[?&]z=(\d+)/i);
+  const parsedZoom = zMatch ? parseInt(zMatch[1], 10) : undefined;
+
+  if (qMatch) {
+    const lat = parseFloat(qMatch[1]);
+    const lng = parseFloat(qMatch[2]);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      return {
+        lat,
+        lng,
+        zoom: parsedZoom && !isNaN(parsedZoom) ? parsedZoom : 17,
+      };
+    }
+  }
+
+  // 3. Google Maps URL @lat,lng,zoom
+  const atMatch = text.match(/@(-?\d+\.\d+),(-?\d+\.\d+)(?:,(\d+)z)?/i);
+  if (atMatch) {
+    const lat = parseFloat(atMatch[1]);
+    const lng = parseFloat(atMatch[2]);
+    const zoom = atMatch[3] ? parseInt(atMatch[3], 10) : (parsedZoom || 17);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      return { lat, lng, zoom: isNaN(zoom) ? 17 : zoom };
+    }
+  }
+
+  // 4. PB parameters in embed URL (!2dlng !3dlat)
+  const pbLngMatch = text.match(/!2d(-?\d+\.\d+)/);
+  const pbLatMatch = text.match(/!3d(-?\d+\.\d+)/);
+  if (pbLatMatch && pbLngMatch) {
+    const lat = parseFloat(pbLatMatch[1]);
+    const lng = parseFloat(pbLngMatch[1]);
+    if (!isNaN(lat) && !isNaN(lng)) {
+      return { lat, lng, zoom: parsedZoom || 17 };
+    }
+  }
+
+  return defaultCoord;
+}
+
+/**
+ * Builds standard Google Maps embed URL from latitude, longitude, and zoom.
+ */
+export function buildGoogleMapsUrlFromCoords(lat: number, lng: number, zoom: number = 17): string {
+  const roundedLat = parseFloat(lat.toFixed(6));
+  const roundedLng = parseFloat(lng.toFixed(6));
+  const clampedZoom = Math.max(1, Math.min(21, Math.round(zoom)));
+  return `https://maps.google.com/maps?q=${roundedLat},${roundedLng}&t=&z=${clampedZoom}&ie=UTF8&iwloc=&output=embed`;
 }
 

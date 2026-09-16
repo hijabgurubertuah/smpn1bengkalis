@@ -582,6 +582,19 @@ export default function App() {
           schoolAddress={config.footer.address}
           showVideo={layoutSections.showVideoEmbed}
           showMap={layoutSections.showMapEmbed}
+          onRefreshMap={async () => {
+            const syncRes = await fetchAndSyncLatestData();
+            if (syncRes.success && syncRes.config) {
+              setConfig(syncRes.config);
+              setSyncToast({
+                message: 'Peta diperbarui dari cloud',
+                type: 'success',
+              });
+              setTimeout(() => {
+                setSyncToast(null);
+              }, 1500);
+            }
+          }}
         />
       )}
 

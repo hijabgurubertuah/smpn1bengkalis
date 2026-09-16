@@ -121,7 +121,7 @@ export const AdminThemeTab: React.FC<AdminThemeTabProps> = ({ config, onChange }
     },
     {
       id: 'color-banner-overlay',
-      label: 'Warna Gradasi Latar Banner',
+      label: 'Warna Gradasi Latar Banner (Separuh Gambar)',
       value: activeBannerColor,
       onChange: (val) => updateTheme({ bannerOverlayColor: val }),
     },
@@ -179,18 +179,18 @@ export const AdminThemeTab: React.FC<AdminThemeTabProps> = ({ config, onChange }
           />
         ))}
 
-        {/* Pengaturan Kegelapan Gradasi Banner */}
+        {/* Pengaturan Opacity Gradasi Banner */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-white rounded-xl border border-slate-200 hover:border-slate-300 transition-colors shadow-2xs col-span-1 lg:col-span-2">
           <div className="flex items-center justify-between sm:justify-start gap-3">
             <span className="text-xs sm:text-sm font-bold text-slate-800 tracking-tight">
-              Tingkat Kegelapan Gradasi Banner
+              Tingkat Opacity Gradasi Banner (Separuh Gambar)
             </span>
             <span className="text-xs font-mono font-bold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-lg border border-blue-200">
               {activeBannerOpacity}%
             </span>
           </div>
           <div className="flex items-center gap-3 w-full sm:w-72">
-            <span className="text-[11px] text-slate-400 font-bold shrink-0">0% (Bening/Terang)</span>
+            <span className="text-[11px] text-slate-400 font-bold shrink-0">0% (Bening/Transparan)</span>
             <input
               type="range"
               min="0"
@@ -199,7 +199,7 @@ export const AdminThemeTab: React.FC<AdminThemeTabProps> = ({ config, onChange }
               onChange={(e) => updateTheme({ bannerOverlayOpacity: parseInt(e.target.value, 10) })}
               className="w-full accent-blue-600 cursor-pointer h-2 bg-slate-200 rounded-lg"
             />
-            <span className="text-[11px] text-slate-400 font-bold shrink-0">100% (Gelap)</span>
+            <span className="text-[11px] text-slate-400 font-bold shrink-0">100% (Pekat/Gelap)</span>
           </div>
         </div>
 

@@ -86,6 +86,25 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ config }) => {
       ? 'pt-24 sm:pt-36 pb-24 sm:pb-32'
       : 'py-16 sm:py-24 md:py-28';
 
+  // Gradient covering half of the banner according to text alignment & configurable opacity
+  const getBannerHalfGradient = () => {
+    if (opacityRatio <= 0) return 'transparent';
+
+    const c1 = hexToRgba(bannerColor, opacityRatio);
+    const c2 = hexToRgba(bannerColor, opacityRatio * 0.85);
+    const c3 = hexToRgba(bannerColor, opacityRatio * 0.35);
+    const c4 = 'transparent';
+
+    if (textAlign === 'right') {
+      return `linear-gradient(to left, ${c1} 0%, ${c2} 35%, ${c3} 55%, ${c4} 75%)`;
+    }
+    if (textAlign === 'center') {
+      return `linear-gradient(to top, ${c1} 0%, ${c2} 40%, ${c3} 60%, ${c4} 80%)`;
+    }
+    // Default left alignment - covers left half of the banner
+    return `linear-gradient(to right, ${c1} 0%, ${c2} 35%, ${c3} 55%, ${c4} 75%)`;
+  };
+
   return (
     <div id="beranda" className="relative text-white w-full max-w-full overflow-hidden">
       
@@ -112,17 +131,23 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ config }) => {
             <div className="absolute inset-0 bg-slate-900" />
           )}
 
-          {/* Pelindung Kontras Teks */}
-          <div className="absolute inset-0 pointer-events-none bg-gradient-to-r from-slate-950/90 via-slate-950/70 to-slate-950/40 z-20" />
-          <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-slate-950/95 via-slate-950/40 to-transparent z-20" />
-
-          {/* Configurable Gradients Overlay dari Pengaturan Tema Admin */}
+          {/* Gradasi yang menutupi separuh gambar banner secara halus dengan opacity yang dapat diatur */}
           <div
             className="absolute inset-0 pointer-events-none transition-all duration-300 z-20"
             style={{
-              background: `linear-gradient(to right, ${hexToRgba(bannerColor, Math.min(1, opacityRatio * 1.15))}, ${hexToRgba(bannerColor, Math.min(1, opacityRatio * 0.75))})`,
+              background: getBannerHalfGradient(),
             }}
           />
+
+          {/* Gradasi pelindung halus bagian bawah untuk keterbacaan teks saat vertikal */}
+          {opacityRatio > 0 && (
+            <div
+              className="absolute inset-x-0 bottom-0 h-1/2 pointer-events-none z-20 transition-all duration-300"
+              style={{
+                background: `linear-gradient(to top, ${hexToRgba(bannerColor, opacityRatio * 0.5)} 0%, transparent 100%)`,
+              }}
+            />
+          )}
         </div>
 
         {/* Hero Content Area */}

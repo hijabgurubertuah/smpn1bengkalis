@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { EmbedsConfig } from '../../types';
-import { Video, MapPin, ExternalLink, Navigation, Compass, Loader2 } from 'lucide-react';
+import { Video, MapPin, Navigation, Compass, Loader2, RefreshCw } from 'lucide-react';
 import { convertToGoogleMapsEmbedUrl, OFFICIAL_SMPN1_MAP_EMBED_URL } from '../../lib/embedHelper';
 
 interface EmbedMediaSectionProps {
@@ -8,6 +8,7 @@ interface EmbedMediaSectionProps {
   schoolAddress: string;
   showVideo: boolean;
   showMap: boolean;
+  onRefreshMap?: () => Promise<void> | void;
 }
 
 export const EmbedMediaSection: React.FC<EmbedMediaSectionProps> = ({
@@ -15,35 +16,49 @@ export const EmbedMediaSection: React.FC<EmbedMediaSectionProps> = ({
   schoolAddress,
   showVideo,
   showMap,
+  onRefreshMap,
 }) => {
   const [isMapLoaded, setIsMapLoaded] = useState(false);
-  const [mapLoadTimeout, setMapLoadTimeout] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  React.useEffect(() => {
-    // If iframe doesn't trigger onLoad after 7 seconds (e.g. adblocker or cookie policy),
-    // display the interactive fallback bar so user is never stranded
-    const timer = setTimeout(() => {
-      setMapLoadTimeout(true);
-    }, 7000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (!showVideo && !showMap) return null;
-
-  // Safe Google Maps URL parsing
+  // Safe Google Maps URL parsing directly from the embeds configuration
   const mapResult = convertToGoogleMapsEmbedUrl(
     embeds.mapIframeUrl || OFFICIAL_SMPN1_MAP_EMBED_URL,
-    schoolAddress || 'Jl. Karimun, Bengkalis Kota, Kab. Bengkalis, Riau 28712'
+    schoolAddress || 'SMP Negeri 1 Bengkalis, Jl. Karimun, Bengkalis Kota'
   );
   const effectiveMapUrl = mapResult.embedUrl || OFFICIAL_SMPN1_MAP_EMBED_URL;
 
-  // Direct Google Maps web link
+  // Extract destination location from configured embed or address (no hardcoded coordinates)
+  const mapDestination =
+    mapResult.detectedLocation ||
+    schoolAddress ||
+    embeds.mapTitle ||
+    'SMP Negeri 1 Bengkalis, Jl. Karimun, Bengkalis Kota';
+
+  // Direct Google Maps web link based on configured destination
   const directMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    'SMP Negeri 1 Bengkalis, Jl. Karimun, Bengkalis Kota'
+    mapDestination
   )}`;
   const directRouteUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-    '1.4736,102.114'
+    mapDestination
   )}`;
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    setIsMapLoaded(false);
+    try {
+      if (onRefreshMap) {
+        await onRefreshMap();
+      }
+    } finally {
+      // Increment local refresh key to force iframe re-render with fresh data
+      setRefreshKey((prev) => prev + 1);
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 500);
+    }
+  };
 
   // Convert standard YouTube watch URLs to embed URLs if needed
   const getCleanEmbedUrl = (url: string) => {
@@ -159,7 +174,7 @@ export const EmbedMediaSection: React.FC<EmbedMediaSectionProps> = ({
               </div>
 
               {/* Map Iframe Container (Non-clickable via transparent overlay pointer-events-none) */}
-              <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-xs border border-slate-200 bg-slate-100">
+              <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-xs border border-slate-200 bg-slate-100 group">
                 {!isMapLoaded && (
                   <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-100 text-slate-500 gap-2">
                     <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
@@ -168,7 +183,7 @@ export const EmbedMediaSection: React.FC<EmbedMediaSectionProps> = ({
                 )}
 
                 <iframe
-                  key={effectiveMapUrl}
+                  key={`${effectiveMapUrl}-${refreshKey}`}
                   src={effectiveMapUrl}
                   title={embeds.mapTitle || 'Lokasi SMP Negeri 1 Bengkalis'}
                   loading="lazy"
@@ -179,6 +194,18 @@ export const EmbedMediaSection: React.FC<EmbedMediaSectionProps> = ({
                 />
                 {/* Transparent overlay that completely intercepts mouse/touch clicks so map cannot be interacted with directly */}
                 <div className="absolute inset-0 z-30 pointer-events-auto bg-transparent" />
+
+                {/* Small Refresh Button in corner of map */}
+                <button
+                  type="button"
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="absolute top-2.5 right-2.5 z-40 p-2 rounded-xl bg-white/95 hover:bg-white text-slate-700 hover:text-emerald-700 shadow-md border border-slate-200/80 backdrop-blur-xs transition-all cursor-pointer flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  title="Perbarui peta & koordinat dari cloud"
+                  aria-label="Refresh peta dari cloud"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-emerald-600' : ''}`} />
+                </button>
               </div>
 
               {/* Address Bar */}
