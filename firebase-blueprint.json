@@ -1,0 +1,53 @@
+{
+  "entities": {
+    "SchoolConfig": {
+      "title": "SchoolConfig",
+      "description": "Konfigurasi utama portal sekolah termasuk identitas, hero banner, menu, tata letak, dan kontak.",
+      "type": "object",
+      "properties": {
+        "adminPassword": { "type": "string", "description": "Kata sandi akses login portal admin" },
+        "identity": { "type": "object", "description": "Nama sekolah, logo, favicon, akreditasi, dan running ticker" },
+        "header": { "type": "object", "description": "Hero banner title, image URL, CTA buttons, dan highlight stats" },
+        "navMenus": { "type": "array", "description": "Daftar menu navigasi utama dan dropdown" },
+        "layoutSections": { "type": "object", "description": "Status visibilitas tiap komponen seksi di web" },
+        "principal": { "type": "object", "description": "Profil kepala sekolah, foto, quote, dan sambutan" },
+        "embeds": { "type": "object", "description": "YouTube video profil dan Google Maps iframe" },
+        "facilities": { "type": "array", "description": "Daftar fasilitas sekolah" },
+        "extracurriculars": { "type": "array", "description": "Daftar ekstrakurikuler sekolah" },
+        "agendas": { "type": "array", "description": "Daftar agenda kegiatan terdekat" },
+        "footer": { "type": "object", "description": "Informasi footer, alamat, kontak, dan media sosial" }
+      },
+      "required": ["identity", "header", "navMenus", "layoutSections", "principal", "embeds", "footer"]
+    },
+    "NewsArticle": {
+      "title": "NewsArticle",
+      "description": "Dokumen berita atau artikel informasi sekolah.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "slug": { "type": "string" },
+        "category": { "type": "string" },
+        "summary": { "type": "string" },
+        "content": { "type": "string" },
+        "coverImage": { "type": "string" },
+        "author": { "type": "string" },
+        "date": { "type": "string" },
+        "isPinned": { "type": "boolean" },
+        "views": { "type": "number" },
+        "status": { "type": "string", "enum": ["published", "draft"] }
+      },
+      "required": ["id", "title", "category", "content", "status"]
+    }
+  },
+  "firestore": {
+    "/school_portal/main_config": {
+      "schema": "SchoolConfig",
+      "description": "Konfigurasi utama portal sekolah yang dikelola oleh admin."
+    },
+    "/news_articles/{articleId}": {
+      "schema": "NewsArticle",
+      "description": "Koleksi postingan berita dan artikel sekolah."
+    }
+  }
+}

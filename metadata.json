@@ -1,0 +1,8 @@
+{
+  "name": "web smpn1 bengkalis publish",
+  "description": "web smpn1 bengkalis publish",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+html, body {
+  scroll-behavior: smooth;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+#root {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: marquee 32s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+@keyframes spinY {
+  0% {
+    transform: perspective(400px) rotateY(0deg);
+  }
+  100% {
+    transform: perspective(400px) rotateY(360deg);
+  }
+}
+
+.animate-spin-y {
+  animation: spinY 6s linear infinite;
+  transform-style: preserve-3d;
+}
+
+/* Subscript & Superscript styling rules */
+sub {
+  font-size: 0.75em;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+  bottom: -0.25em;
+}
+
+sup {
+  font-size: 0.75em;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+  top: -0.5em;
+}
+
+/* Prevent nested sub or sup from scaling font size down recursively */
+sub sub, sub sup, sup sub, sup sup {
+  font-size: 1em !important;
+}
+
+/* Link styling in editor & content renderer */
+[contenteditable] a,
+.prose a,
+.formatted-content a {
+  color: #2563eb !important;
+  text-decoration: underline !important;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+[contenteditable] a:hover,
+.prose a:hover,
+.formatted-content a:hover {
+  color: #1d4ed8 !important;
+}
+

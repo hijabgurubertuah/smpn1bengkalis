@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Portal Resmi &amp; CMS Publikasi</title>
+    <meta name="description" content="Portal informasi profil, berita, agenda, prestasi, dan layanan publik." />
+    <meta property="og:title" content="Portal Resmi &amp; CMS Publikasi" />
+    <meta property="og:description" content="Portal informasi profil, berita, agenda, prestasi, dan layanan publik." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#0f172a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="PortalResmi" />
+    <link id="dynamic-favicon" rel="icon" type="image/x-icon" href="/favicon.ico?v=4" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=4" />
+    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=4" />
+    <link id="dynamic-apple-icon" rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=4" />
+    <script>
+      // Instantly apply user-uploaded school favicon from local storage before render
+      (function() {
+        try {
+          var raw = localStorage.getItem('smpn1_public_config_v4') || localStorage.getItem('public_school_config') || localStorage.getItem('admin_school_config') || localStorage.getItem('school_config');
+          if (raw) {
+            var parsed = JSON.parse(raw);
+            var icon = (parsed && parsed.identity && (parsed.identity.faviconUrl || parsed.identity.logoUrl)) || '';
+            if (icon && typeof icon === 'string' && icon.trim() && !icon.includes('photo-1546410531') && !icon.includes('photo-1594608661623')) {
+              var fav = document.getElementById('dynamic-favicon');
+              if (fav) fav.href = icon.trim();
+              var apple = document.getElementById('dynamic-apple-icon');
+              if (apple) apple.href = icon.trim();
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+      // Suppress benign [vite] websocket connection logs in sandboxed preview iframe
+      (function() {
+        const origError = console.error;
+        console.error = function(...args) {
+          if (args.length > 0 && typeof args[0] === 'string' && args[0].includes('[vite]')) {
+            console.debug(...args);
+            return;
+          }
+          origError.apply(console, args);
+        };
+      })();
+    </script>
+  </head>
+  <body class="font-sans antialiased bg-slate-50 text-slate-900 selection:bg-blue-600 selection:text-white">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
