@@ -154,13 +154,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ config }) => {
         <div className={`relative z-30 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full ${verticalClasses} ${hasQuickStats ? 'pb-28 sm:pb-32 md:pb-28' : ''}`}>
           <div className={`max-w-3xl space-y-4 flex flex-col ${alignClasses}`}>
             
-            {/* Main Title */}
-            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
+            {/* Main Title with professional tight text shadow */}
+            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight [text-shadow:_0_2px_10px_rgba(0,0,0,0.7),_0_1px_2px_rgba(0,0,0,0.8)]">
               {header.heroTitle}
             </h1>
 
-            {/* Subtitle */}
-            <p className="text-sm sm:text-base text-slate-200 font-normal leading-relaxed max-w-2xl">
+            {/* Subtitle with professional tight text shadow */}
+            <p className="text-sm sm:text-base text-slate-100 font-medium leading-relaxed max-w-2xl [text-shadow:_0_1px_6px_rgba(0,0,0,0.65),_0_1px_2px_rgba(0,0,0,0.75)]">
               {header.heroSubtitle}
             </p>
 
