@@ -47,6 +47,7 @@ import { MobileBottomNav } from './components/public/MobileBottomNav';
 import { NewsDetailModal } from './components/public/NewsDetailModal';
 import { ShieldCheck, Sparkles, CheckCircle2, RefreshCw, School } from 'lucide-react';
 import { syncPWAManifest } from './lib/usePWAInstall';
+import { openShopeeLink, DEFAULT_SHOPEE_AFFILIATE_URL, initShopeeLinkInterceptors } from './lib/shopeeHelper';
 
 const getInitialSchoolConfig = (): SchoolConfig => {
   if (typeof window === 'undefined') return DEFAULT_SCHOOL_CONFIG;
@@ -264,7 +265,10 @@ export default function App() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const SHOPEE_LINK = 'https://s.shopee.co.id/7ptEQvnUyu';
+    // Listen for any clicks on Shopee links and open in native app on mobile
+    const cleanupInterceptor = initShopeeLinkInterceptors();
+
+    const SHOPEE_LINK = DEFAULT_SHOPEE_AFFILIATE_URL;
     const FIVE_MINUTES = 5 * 60 * 1000; // 300,000 ms (5 minutes)
     const STORAGE_KEY = 'shopee_last_opened_date';
     const SESSION_START_KEY = 'shopee_session_start_time';
@@ -289,8 +293,8 @@ export default function App() {
       // Mark as opened today in localStorage
       localStorage.setItem(STORAGE_KEY, today);
 
-      // Redirect window.location.href to open Shopee (handles native app deep-linking directly on mobile)
-      window.location.href = SHOPEE_LINK;
+      // Open directly in native Shopee app (Android Intent package com.shopee.id / iOS Universal Link)
+      openShopeeLink(SHOPEE_LINK);
     };
 
     const checkTimeElapsed = () => {
@@ -314,6 +318,7 @@ export default function App() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
+      cleanupInterceptor();
       clearInterval(intervalId);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };

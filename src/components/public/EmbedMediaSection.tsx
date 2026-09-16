@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { EmbedsConfig } from '../../types';
-import { Video, MapPin, ExternalLink, Navigation } from 'lucide-react';
-import { convertToGoogleMapsEmbedUrl } from '../../lib/embedHelper';
+import { Video, MapPin, ExternalLink, Navigation, Compass, Loader2 } from 'lucide-react';
+import { convertToGoogleMapsEmbedUrl, OFFICIAL_SMPN1_MAP_EMBED_URL } from '../../lib/embedHelper';
 
 interface EmbedMediaSectionProps {
   embeds: EmbedsConfig;
@@ -16,11 +16,34 @@ export const EmbedMediaSection: React.FC<EmbedMediaSectionProps> = ({
   showVideo,
   showMap,
 }) => {
+  const [isMapLoaded, setIsMapLoaded] = useState(false);
+  const [mapLoadTimeout, setMapLoadTimeout] = useState(false);
+
+  React.useEffect(() => {
+    // If iframe doesn't trigger onLoad after 7 seconds (e.g. adblocker or cookie policy),
+    // display the interactive fallback bar so user is never stranded
+    const timer = setTimeout(() => {
+      setMapLoadTimeout(true);
+    }, 7000);
+    return () => clearTimeout(timer);
+  }, []);
+
   if (!showVideo && !showMap) return null;
 
   // Safe Google Maps URL parsing
-  const mapResult = convertToGoogleMapsEmbedUrl(embeds.mapIframeUrl, schoolAddress);
-  const effectiveMapUrl = mapResult.embedUrl;
+  const mapResult = convertToGoogleMapsEmbedUrl(
+    embeds.mapIframeUrl || OFFICIAL_SMPN1_MAP_EMBED_URL,
+    schoolAddress || 'Jl. Karimun, Bengkalis Kota, Kab. Bengkalis, Riau 28712'
+  );
+  const effectiveMapUrl = mapResult.embedUrl || OFFICIAL_SMPN1_MAP_EMBED_URL;
+
+  // Direct Google Maps web link
+  const directMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+    'SMP Negeri 1 Bengkalis, Jl. Karimun, Bengkalis Kota'
+  )}`;
+  const directRouteUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+    '1.4736,102.114'
+  )}`;
 
   // Convert standard YouTube watch URLs to embed URLs if needed
   const getCleanEmbedUrl = (url: string) => {
@@ -108,41 +131,75 @@ export const EmbedMediaSection: React.FC<EmbedMediaSectionProps> = ({
                   </span>
                   <div className="min-w-0">
                     <h2 className="text-base sm:text-lg font-bold text-slate-900 truncate">
-                      {embeds.mapTitle || 'Peta Lokasi'}
+                      {embeds.mapTitle || 'Lokasi SMP Negeri 1 Bengkalis'}
                     </h2>
                   </div>
                 </div>
 
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                    mapResult.detectedLocation || schoolAddress
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 text-xs font-semibold px-3 py-1.5 rounded-xl transition-colors cursor-pointer shrink-0 border border-slate-200/80 shadow-2xs"
-                  title="Buka di Google Maps"
-                >
-                  <Navigation className="w-3.5 h-3.5 text-blue-600" />
-                  <span className="hidden sm:inline">Buka Peta</span>
-                  <ExternalLink className="w-3 h-3 text-slate-400" />
-                </a>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <a
+                    href={directRouteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-2.5 py-1.5 rounded-xl transition-colors cursor-pointer shadow-xs"
+                    title="Petunjuk Rute ke Sekolah"
+                  >
+                    <Compass className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Rute</span>
+                  </a>
+                  <a
+                    href={directMapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-xl transition-colors cursor-pointer border border-slate-200/80 shadow-2xs"
+                    title="Buka di Google Maps Langsung"
+                  >
+                    <Navigation className="w-3.5 h-3.5 text-blue-600" />
+                    <span className="hidden sm:inline">Buka Peta</span>
+                    <ExternalLink className="w-3 h-3 text-slate-400" />
+                  </a>
+                </div>
               </div>
 
-              <div className="w-full aspect-video rounded-2xl overflow-hidden shadow-xs border border-slate-200 bg-slate-100">
+              {/* Map Iframe Container */}
+              <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-xs border border-slate-200 bg-slate-100">
+                {!isMapLoaded && (
+                  <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-100 text-slate-500 gap-2">
+                    <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
+                    <span className="text-xs font-medium">Memuat peta lokasi...</span>
+                  </div>
+                )}
+
                 <iframe
+                  key={effectiveMapUrl}
                   src={effectiveMapUrl}
-                  title={embeds.mapTitle || 'Peta Lokasi'}
+                  title={embeds.mapTitle || 'Lokasi SMP Negeri 1 Bengkalis'}
                   loading="lazy"
+                  allowFullScreen
                   referrerPolicy="no-referrer-when-downgrade"
-                  className="w-full h-full border-0"
+                  onLoad={() => setIsMapLoaded(true)}
+                  className="w-full h-full border-0 relative z-20"
                 />
               </div>
 
-              <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 min-w-0">
-                <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span className="truncate" title={schoolAddress}>
-                  {schoolAddress || 'Lokasi Kampus / Sekolah'}
-                </span>
+              {/* Address and Direct Action Bar */}
+              <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500 min-w-0">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span className="truncate font-medium text-slate-700" title={schoolAddress || 'Jl. Karimun, Bengkalis Kota, Riau 28712'}>
+                    {schoolAddress || 'Jl. Karimun, Bengkalis Kota, Kab. Bengkalis, Riau 28712'}
+                  </span>
+                </div>
+
+                <a
+                  href={directMapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-800 font-semibold shrink-0"
+                >
+                  <span>Buka di Aplikasi Google Maps</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
               </div>
             </div>
           )}

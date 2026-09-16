@@ -24,6 +24,7 @@ import {
 import { parseEmbedUrl } from '../../lib/embedHelper';
 import { useBodyScrollLock } from '../../lib/useBodyScrollLock';
 import { FormattedContentRenderer } from '../common/FormattedContentRenderer';
+import { openShopeeLink, isShopeeUrl } from '../../lib/shopeeHelper';
 import { CommentsSection } from './CommentsSection';
 import {
   toggleLikeArticle,
@@ -649,7 +650,13 @@ const SingleNewsModalView: React.FC<SingleNewsModalViewProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    window.open(actionConfirmUrl, '_blank', 'noopener,noreferrer');
+                    if (actionConfirmUrl) {
+                      if (isShopeeUrl(actionConfirmUrl)) {
+                        openShopeeLink(actionConfirmUrl);
+                      } else {
+                        window.open(actionConfirmUrl, '_blank', 'noopener,noreferrer');
+                      }
+                    }
                     setActionConfirmUrl(null);
                   }}
                   className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-500/20 transition-all cursor-pointer flex items-center gap-1.5"

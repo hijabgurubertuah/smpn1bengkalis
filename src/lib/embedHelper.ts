@@ -109,6 +109,9 @@ export function parseEmbedUrl(input?: string): ParsedEmbed | null {
   };
 }
 
+export const OFFICIAL_SMPN1_MAP_EMBED_URL =
+  'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.723145028092!2d102.1114250749658!3d1.4735999985122176!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31d15fc2a5b8205f%3A0x296dbf2b26c6d2dc!2sSMP%20Negeri%201%20Bengkalis!5e0!3m2!1sid!2sid!4v1710000000000!5m2!1sid!2sid';
+
 export interface ParsedGoogleMapResult {
   embedUrl: string;
   sourceType: 'iframe_code' | 'embed_url' | 'place_url' | 'search_url' | 'coordinates' | 'plain_address' | 'short_link';
@@ -127,21 +130,23 @@ export function convertToGoogleMapsEmbedUrl(
   fallbackAddress?: string
 ): ParsedGoogleMapResult {
   if (!input || !input.trim()) {
-    if (fallbackAddress && fallbackAddress.trim()) {
-      const loc = fallbackAddress.trim();
+    // If fallback mentions Bengkalis or SMPN 1, use verified official embed
+    if (!fallbackAddress || /smp\s*n(?:egeri)?\s*1|bengkalis/i.test(fallbackAddress)) {
       return {
-        embedUrl: `https://maps.google.com/maps?q=${encodeURIComponent(loc)}&t=&z=16&ie=UTF8&iwloc=&output=embed`,
-        sourceType: 'plain_address',
-        detectedLocation: loc,
+        embedUrl: OFFICIAL_SMPN1_MAP_EMBED_URL,
+        sourceType: 'embed_url',
+        detectedLocation: 'SMP Negeri 1 Bengkalis, Jl. Karimun',
         isValid: true,
-        notes: 'Menggunakan alamat resmi sekolah untuk peta.',
+        notes: 'Menggunakan peta embed resmi SMP Negeri 1 Bengkalis terverifikasi.',
       };
     }
+    const loc = fallbackAddress.trim();
     return {
-      embedUrl: '',
+      embedUrl: `https://maps.google.com/maps?q=${encodeURIComponent(loc)}&t=&z=16&ie=UTF8&iwloc=&output=embed`,
       sourceType: 'plain_address',
-      isValid: false,
-      notes: 'Belum ada tautan atau alamat peta yang disetel.',
+      detectedLocation: loc,
+      isValid: true,
+      notes: 'Menggunakan alamat resmi sekolah untuk peta.',
     };
   }
 
@@ -169,10 +174,30 @@ export function convertToGoogleMapsEmbedUrl(
     };
   }
 
-  // 3. Already has output=embed
+  // 3. If it's for SMP Negeri 1 Bengkalis (including old legacy output=embed that failed on desktop)
+  if (/smp\s*n(?:egeri)?\s*1.*bengkalis|bengkalis.*smp\s*n(?:egeri)?\s*1/i.test(raw)) {
+    return {
+      embedUrl: OFFICIAL_SMPN1_MAP_EMBED_URL,
+      sourceType: 'embed_url',
+      detectedLocation: 'SMP Negeri 1 Bengkalis, Jl. Karimun',
+      isValid: true,
+      notes: 'Dikonversi otomatis ke URL embed resmi Google Maps SMP Negeri 1 Bengkalis.',
+    };
+  }
+
+  // 4. Already has output=embed
   if (raw.includes('output=embed')) {
     const qMatch = raw.match(/[?&]q=([^&]+)/i);
     const detectedLocation = qMatch ? decodeURIComponent(qMatch[1].replace(/\+/g, ' ')) : undefined;
+    if (detectedLocation && /smp\s*n(?:egeri)?\s*1|bengkalis/i.test(detectedLocation)) {
+      return {
+        embedUrl: OFFICIAL_SMPN1_MAP_EMBED_URL,
+        sourceType: 'embed_url',
+        detectedLocation: 'SMP Negeri 1 Bengkalis',
+        isValid: true,
+        notes: 'Peta resmi SMP Negeri 1 Bengkalis aktif.',
+      };
+    }
     return {
       embedUrl: raw,
       sourceType: 'embed_url',
@@ -182,10 +207,19 @@ export function convertToGoogleMapsEmbedUrl(
     };
   }
 
-  // 4. Google Maps Place URL: https://www.google.com/maps/place/Place+Name/@lat,lng,zoom/...
+  // 5. Google Maps Place URL: https://www.google.com/maps/place/Place+Name/@lat,lng,zoom/...
   const placeMatch = raw.match(/maps\/place\/([^/@?]+)/i);
   if (placeMatch && placeMatch[1]) {
     const placeName = decodeURIComponent(placeMatch[1].replace(/\+/g, ' '));
+    if (/smp\s*n(?:egeri)?\s*1|bengkalis/i.test(placeName)) {
+      return {
+        embedUrl: OFFICIAL_SMPN1_MAP_EMBED_URL,
+        sourceType: 'embed_url',
+        detectedLocation: 'SMP Negeri 1 Bengkalis',
+        isValid: true,
+        notes: 'Peta resmi SMP Negeri 1 Bengkalis aktif.',
+      };
+    }
     // Check if coordinates exist in URL @lat,lng
     const coordMatch = raw.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
     const query = coordMatch ? `${coordMatch[1]},${coordMatch[2]}` : placeName;
@@ -199,10 +233,19 @@ export function convertToGoogleMapsEmbedUrl(
     };
   }
 
-  // 5. Google Maps Search or query URL (maps.google.com/?q=... or google.com/maps/search/...)
+  // 6. Google Maps Search or query URL (maps.google.com/?q=... or google.com/maps/search/...)
   const searchMatch = raw.match(/[?&]q=([^&]+)/i) || raw.match(/maps\/search\/([^/?]+)/i);
   if (searchMatch && searchMatch[1]) {
     const queryParam = decodeURIComponent(searchMatch[1].replace(/\+/g, ' '));
+    if (/smp\s*n(?:egeri)?\s*1|bengkalis/i.test(queryParam)) {
+      return {
+        embedUrl: OFFICIAL_SMPN1_MAP_EMBED_URL,
+        sourceType: 'embed_url',
+        detectedLocation: 'SMP Negeri 1 Bengkalis',
+        isValid: true,
+        notes: 'Peta resmi SMP Negeri 1 Bengkalis aktif.',
+      };
+    }
     return {
       embedUrl: `https://maps.google.com/maps?q=${encodeURIComponent(queryParam)}&t=&z=16&ie=UTF8&iwloc=&output=embed`,
       sourceType: 'search_url',
@@ -212,7 +255,7 @@ export function convertToGoogleMapsEmbedUrl(
     };
   }
 
-  // 6. Coordinates format directly (e.g. "-6.2345, 106.9876")
+  // 7. Coordinates format directly (e.g. "-6.2345, 106.9876" or "1.4736, 102.114")
   const directCoordMatch = raw.match(/^(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)$/);
   if (directCoordMatch) {
     const lat = directCoordMatch[1];
@@ -226,9 +269,18 @@ export function convertToGoogleMapsEmbedUrl(
     };
   }
 
-  // 7. Short links (maps.app.goo.gl/... or goo.gl/maps/...)
+  // 8. Short links (maps.app.goo.gl/... or goo.gl/maps/...)
   if (raw.includes('maps.app.goo.gl') || raw.includes('goo.gl/maps')) {
     const loc = fallbackAddress && fallbackAddress.trim() ? fallbackAddress.trim() : raw;
+    if (/smp\s*n(?:egeri)?\s*1|bengkalis/i.test(loc)) {
+      return {
+        embedUrl: OFFICIAL_SMPN1_MAP_EMBED_URL,
+        sourceType: 'embed_url',
+        detectedLocation: 'SMP Negeri 1 Bengkalis',
+        isValid: true,
+        notes: 'Peta resmi SMP Negeri 1 Bengkalis aktif.',
+      };
+    }
     return {
       embedUrl: `https://maps.google.com/maps?q=${encodeURIComponent(loc)}&t=&z=16&ie=UTF8&iwloc=&output=embed`,
       sourceType: 'short_link',
@@ -238,7 +290,7 @@ export function convertToGoogleMapsEmbedUrl(
     };
   }
 
-  // 8. If starts with http:// or https:// but not recognized Google Maps domain
+  // 9. If starts with http:// or https:// but not recognized Google Maps domain
   if (raw.startsWith('http://') || raw.startsWith('https://')) {
     return {
       embedUrl: raw,
@@ -248,7 +300,17 @@ export function convertToGoogleMapsEmbedUrl(
     };
   }
 
-  // 9. Plain address or location name entered
+  // 10. Plain address or location name entered
+  if (/smp\s*n(?:egeri)?\s*1|bengkalis/i.test(raw)) {
+    return {
+      embedUrl: OFFICIAL_SMPN1_MAP_EMBED_URL,
+      sourceType: 'embed_url',
+      detectedLocation: 'SMP Negeri 1 Bengkalis',
+      isValid: true,
+      notes: 'Peta resmi SMP Negeri 1 Bengkalis aktif.',
+    };
+  }
+
   return {
     embedUrl: `https://maps.google.com/maps?q=${encodeURIComponent(raw)}&t=&z=16&ie=UTF8&iwloc=&output=embed`,
     sourceType: 'plain_address',
@@ -263,6 +325,9 @@ export function convertToGoogleMapsEmbedUrl(
  */
 export function buildGoogleMapsEmbedUrl(query: string, zoom: number = 16): string {
   const cleanQuery = query.trim();
+  if (!cleanQuery || /smp\s*n(?:egeri)?\s*1|bengkalis/i.test(cleanQuery)) {
+    return OFFICIAL_SMPN1_MAP_EMBED_URL;
+  }
   const clampedZoom = Math.max(1, Math.min(21, Math.round(zoom)));
   return `https://maps.google.com/maps?q=${encodeURIComponent(cleanQuery)}&t=&z=${clampedZoom}&ie=UTF8&iwloc=&output=embed`;
 }
