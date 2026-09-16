@@ -24,7 +24,7 @@ import {
 import { parseEmbedUrl } from '../../lib/embedHelper';
 import { useBodyScrollLock } from '../../lib/useBodyScrollLock';
 import { FormattedContentRenderer } from '../common/FormattedContentRenderer';
-import { openShopeeLink, isShopeeUrl } from '../../lib/shopeeHelper';
+import { openShopeeLink, isShopeeUrl, isMobileDevice } from '../../lib/shopeeHelper';
 import { CommentsSection } from './CommentsSection';
 import {
   toggleLikeArticle,
@@ -652,7 +652,10 @@ const SingleNewsModalView: React.FC<SingleNewsModalViewProps> = ({
                   onClick={() => {
                     if (actionConfirmUrl) {
                       if (isShopeeUrl(actionConfirmUrl)) {
-                        openShopeeLink(actionConfirmUrl);
+                        if (isMobileDevice()) {
+                          openShopeeLink(actionConfirmUrl);
+                        }
+                        // On desktop, opening Shopee links is disabled
                       } else {
                         window.open(actionConfirmUrl, '_blank', 'noopener,noreferrer');
                       }

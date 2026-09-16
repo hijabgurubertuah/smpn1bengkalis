@@ -5,6 +5,7 @@ import { NewsArticle } from '../../types';
 import { loadNewsArticles } from '../../lib/firebase';
 import { DEFAULT_NEWS_ARTICLES } from '../../lib/defaultData';
 import { NewsDetailModal } from '../public/NewsDetailModal';
+import { openShopeeLink, isShopeeUrl, isMobileDevice } from '../../lib/shopeeHelper';
 
 interface FormattedContentRendererProps {
   content: string;
@@ -853,7 +854,14 @@ export const FormattedContentRenderer: React.FC<FormattedContentRendererProps> =
                   <button
                     type="button"
                     onClick={() => {
-                      window.open(pendingLink.href, '_blank', 'noopener,noreferrer');
+                      if (isShopeeUrl(pendingLink.href)) {
+                        if (isMobileDevice()) {
+                          openShopeeLink(pendingLink.href);
+                        }
+                        // If desktop, do nothing as requested
+                      } else {
+                        window.open(pendingLink.href, '_blank', 'noopener,noreferrer');
+                      }
                       setPendingLink(null);
                     }}
                     className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-500/20 transition-all cursor-pointer flex items-center gap-1.5"

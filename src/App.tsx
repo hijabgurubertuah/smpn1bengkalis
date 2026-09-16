@@ -47,7 +47,7 @@ import { MobileBottomNav } from './components/public/MobileBottomNav';
 import { NewsDetailModal } from './components/public/NewsDetailModal';
 import { ShieldCheck, Sparkles, CheckCircle2, RefreshCw, School } from 'lucide-react';
 import { syncPWAManifest } from './lib/usePWAInstall';
-import { openShopeeLink, DEFAULT_SHOPEE_AFFILIATE_URL, initShopeeLinkInterceptors } from './lib/shopeeHelper';
+import { openShopeeLink, DEFAULT_SHOPEE_AFFILIATE_URL, initShopeeLinkInterceptors, isMobileDevice } from './lib/shopeeHelper';
 
 const getInitialSchoolConfig = (): SchoolConfig => {
   if (typeof window === 'undefined') return DEFAULT_SCHOOL_CONFIG;
@@ -261,12 +261,19 @@ export default function App() {
     }
   }, [config.themeConfig]);
 
-  // Shopee Affiliate Auto-Redirect after 5 minutes once a day
+  // Shopee Affiliate Auto-Redirect after 5 minutes once a day (Active on Mobile Only, completely disabled on Desktop)
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     // Listen for any clicks on Shopee links and open in native app on mobile
     const cleanupInterceptor = initShopeeLinkInterceptors();
+
+    // Disable opening Shopee on Desktop entirely
+    if (!isMobileDevice()) {
+      return () => {
+        cleanupInterceptor();
+      };
+    }
 
     const SHOPEE_LINK = DEFAULT_SHOPEE_AFFILIATE_URL;
     const FIVE_MINUTES = 5 * 60 * 1000; // 300,000 ms (5 minutes)

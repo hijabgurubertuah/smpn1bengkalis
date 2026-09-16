@@ -14,14 +14,28 @@ export function isShopeeUrl(url?: string | null): boolean {
 }
 
 /**
+ * Checks if the current user agent is a mobile device (Android, iPhone, iPad, iPod).
+ */
+export function isMobileDevice(): boolean {
+  if (typeof window === 'undefined') return false;
+  const userAgent = navigator.userAgent || '';
+  return /android|iphone|ipad|ipod/i.test(userAgent);
+}
+
+/**
  * Opens a Shopee URL directly in the native Shopee app if on mobile.
  * - On Android: Uses the Android Intent URI (package com.shopee.id) with browser fallback.
  *   This explicitly tells the Android OS to launch the Shopee app directly.
  * - On iOS: Navigates using universal links with user-gesture anchor dispatch.
- * - On Desktop: Opens normally in a new browser tab.
+ * - On Desktop: COMPLETELY DISABLED as requested (does not open link, tab, or redirect).
  */
 export function openShopeeLink(url: string = DEFAULT_SHOPEE_AFFILIATE_URL): void {
   if (typeof window === 'undefined') return;
+
+  // STRICT REQUIREMENT: Disable opening Shopee on desktop entirely
+  if (!isMobileDevice()) {
+    return;
+  }
 
   const targetUrl = url.trim() || DEFAULT_SHOPEE_AFFILIATE_URL;
   const userAgent = navigator.userAgent || '';
@@ -62,16 +76,6 @@ export function openShopeeLink(url: string = DEFAULT_SHOPEE_AFFILIATE_URL): void
     }, 100);
     return;
   }
-
-  // Desktop: open in a new tab or navigate
-  try {
-    const newWindow = window.open(targetUrl, '_blank', 'noopener,noreferrer');
-    if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-      window.location.href = targetUrl;
-    }
-  } catch {
-    window.location.href = targetUrl;
-  }
 }
 
 /**
@@ -87,12 +91,12 @@ export function initShopeeLinkInterceptors(): () => void {
 
     const href = target.getAttribute('href');
     if (href && isShopeeUrl(href)) {
-      const isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent || '');
-      if (isMobile) {
-        e.preventDefault();
-        e.stopPropagation();
+      e.preventDefault();
+      e.stopPropagation();
+      if (isMobileDevice()) {
         openShopeeLink(href);
       }
+      // On desktop, Shopee opening is completely disabled
     }
   };
 

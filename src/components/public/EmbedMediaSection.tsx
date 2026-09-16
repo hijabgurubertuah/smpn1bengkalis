@@ -141,27 +141,24 @@ export const EmbedMediaSection: React.FC<EmbedMediaSectionProps> = ({
                     href={directRouteUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-2.5 py-1.5 rounded-xl transition-colors cursor-pointer shadow-xs"
+                    className="p-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-colors cursor-pointer shadow-xs flex items-center justify-center"
                     title="Petunjuk Rute ke Sekolah"
                   >
-                    <Compass className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Rute</span>
+                    <Compass className="w-4 h-4" />
                   </a>
                   <a
                     href={directMapsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-xl transition-colors cursor-pointer border border-slate-200/80 shadow-2xs"
+                    className="p-2 bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 rounded-xl transition-colors cursor-pointer border border-slate-200/80 shadow-2xs flex items-center justify-center"
                     title="Buka di Google Maps Langsung"
                   >
-                    <Navigation className="w-3.5 h-3.5 text-blue-600" />
-                    <span className="hidden sm:inline">Buka Peta</span>
-                    <ExternalLink className="w-3 h-3 text-slate-400" />
+                    <Navigation className="w-4 h-4 text-blue-600" />
                   </a>
                 </div>
               </div>
 
-              {/* Map Iframe Container */}
+              {/* Map Iframe Container (Non-clickable via transparent overlay pointer-events-none) */}
               <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-xs border border-slate-200 bg-slate-100">
                 {!isMapLoaded && (
                   <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-100 text-slate-500 gap-2">
@@ -178,28 +175,20 @@ export const EmbedMediaSection: React.FC<EmbedMediaSectionProps> = ({
                   allowFullScreen
                   referrerPolicy="no-referrer-when-downgrade"
                   onLoad={() => setIsMapLoaded(true)}
-                  className="w-full h-full border-0 relative z-20"
+                  className="w-full h-full border-0 relative z-20 pointer-events-none"
                 />
+                {/* Transparent overlay that completely intercepts mouse/touch clicks so map cannot be interacted with directly */}
+                <div className="absolute inset-0 z-30 pointer-events-auto bg-transparent" />
               </div>
 
-              {/* Address and Direct Action Bar */}
-              <div className="mt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-500 min-w-0">
+              {/* Address Bar */}
+              <div className="mt-3 flex items-center justify-between gap-2 text-xs text-slate-500 min-w-0">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                   <span className="truncate font-medium text-slate-700" title={schoolAddress || 'Jl. Karimun, Bengkalis Kota, Riau 28712'}>
                     {schoolAddress || 'Jl. Karimun, Bengkalis Kota, Kab. Bengkalis, Riau 28712'}
                   </span>
                 </div>
-
-                <a
-                  href={directMapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-800 font-semibold shrink-0"
-                >
-                  <span>Buka di Aplikasi Google Maps</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
               </div>
             </div>
           )}
