@@ -117,15 +117,14 @@ const SingleNewsModalView: React.FC<SingleNewsModalViewProps> = ({
       url.searchParams.set('post', article.id);
       const shareUrl = url.toString();
 
-      // Formatted text for social sharing
-      const shareText = `*${article.title}*\n\n${article.summary ? article.summary + '\n\n' : ''}Baca selengkapnya di:\n${shareUrl}`;
+      // Formatted text for social sharing (Judul & Link saja - tanpa isi postingan)
+      const shareText = `*${article.title}*\n\n${shareUrl}`;
 
       // Try native Web Share API first if supported
       if (navigator.share) {
         try {
           await navigator.share({
             title: article.title,
-            text: article.summary || article.title,
             url: shareUrl,
           });
           setCopiedNotice(true);
@@ -185,7 +184,7 @@ const SingleNewsModalView: React.FC<SingleNewsModalViewProps> = ({
       tag.setAttribute(attr, value);
     };
 
-    const cleanSummary = article.summary || article.content?.replace(/<[^>]+>/g, '').slice(0, 150) || article.title;
+    const cleanSummary = "Portal Resmi SMP Negeri 1 Bengkalis";
 
     if (article.coverImage) {
       setMetaTag('meta[property="og:image"]', 'content', article.coverImage);

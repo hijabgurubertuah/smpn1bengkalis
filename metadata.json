@@ -1,6 +1,6 @@
 {
-  "name": "web smpn1 bengkalis publish",
-  "description": "web smpn1 bengkalis publish",
+  "name": "Website SMP Negeri 1 Bengkalis",
+  "description": "Portal Resmi SMP Negeri 1 Bengkalis",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
