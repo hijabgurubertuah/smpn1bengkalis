@@ -490,8 +490,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </div>
         </div>
-        <h3 className="text-xl font-black text-white tracking-widest animate-pulse">
-          Loading......
+        <h3 className="text-xl font-black text-white tracking-widest animate-pulse uppercase">
+          SMPN 1 BENGKALIS
         </h3>
       </div>
     )}

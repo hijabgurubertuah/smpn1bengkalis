@@ -393,8 +393,8 @@ export default function App() {
           {/* Spinner & Italic Loading Text */}
           <div className="flex items-center gap-3 mb-2">
             <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-            <p className="italic text-base sm:text-lg font-semibold text-slate-100 tracking-wide">
-              Memuat Portal Sekolah...
+            <p className="text-base sm:text-lg font-black text-white tracking-widest uppercase">
+              SMPN 1 BENGKALIS
             </p>
           </div>
           <p className="text-xs text-slate-400 font-medium">
