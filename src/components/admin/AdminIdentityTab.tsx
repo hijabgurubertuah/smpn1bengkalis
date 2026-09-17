@@ -1,6 +1,6 @@
 import React from 'react';
 import { SchoolConfig } from '../../types';
-import { Sparkles, Globe, Check } from 'lucide-react';
+import { Sparkles, Globe, Check, Target, Compass } from 'lucide-react';
 import { ImageUploadButton } from './ImageUploadButton';
 import { AutoResizeTextarea } from '../common/AutoResizeTextarea';
 
@@ -19,6 +19,13 @@ export const AdminIdentityTab: React.FC<AdminIdentityTabProps> = ({ config, onCh
         ...identity,
         [key]: value,
       },
+    });
+  };
+
+  const updateConfigField = (key: keyof SchoolConfig, value: any) => {
+    onChange({
+      ...config,
+      [key]: value,
     });
   };
 
@@ -177,6 +184,73 @@ export const AdminIdentityTab: React.FC<AdminIdentityTabProps> = ({ config, onCh
                 </button>
               )}
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Visi & Misi Instansi Card */}
+      <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-xs space-y-4">
+        <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <Target className="w-4 h-4 text-blue-600" />
+          <span>Visi & Misi Instansi</span>
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="md:col-span-2">
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Judul Seksi Visi Misi
+            </label>
+            <input
+              type="text"
+              value={config.visiMisiTitle || ''}
+              onChange={(e) => updateConfigField('visiMisiTitle', e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+              placeholder="Contoh: Visi & Misi Instansi..."
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Sub-Judul Seksi Visi Misi
+            </label>
+            <AutoResizeTextarea
+              minRows={1}
+              value={config.visiMisiSubtitle || ''}
+              onChange={(e) => updateConfigField('visiMisiSubtitle', e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none bg-white"
+              placeholder="Sub-deskripsi singkat tentang visi misi..."
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 mb-1">
+              <Compass className="w-4 h-4 text-blue-600" />
+              <span>Pernyataan Visi Utama</span>
+            </div>
+            <AutoResizeTextarea
+              minRows={2}
+              value={config.visi || ''}
+              onChange={(e) => updateConfigField('visi', e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none bg-white"
+              placeholder="Tulis visi utama instansi di sini..."
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 mb-1">
+              <Target className="w-4 h-4 text-emerald-600" />
+              <span>Daftar Misi Strategis (Tulis 1 misi per baris baru)</span>
+            </div>
+            <p className="text-[10px] text-slate-400 mb-2 leading-relaxed">
+              Tiap baris baru (tekan Enter) secara otomatis akan dirender sebagai poin misi bernomor yang rapi di halaman utama.
+            </p>
+            <textarea
+              rows={6}
+              value={config.misi || ''}
+              onChange={(e) => updateConfigField('misi', e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none bg-white font-medium"
+              placeholder="Contoh:&#10;Menanamkan nilai keimanan dan ketakwaan...&#10;Menyelenggarakan pembelajaran aktif dan inovatif...&#10;Mengembangkan potensi akademik dan non-akademik..."
+            />
           </div>
         </div>
       </div>

@@ -1,8 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { PrincipalConfig, NewsArticle } from '../../types';
-import { ChevronRight, Award, Pin, Calendar, ArrowUpRight } from 'lucide-react';
+import { ChevronRight, Award, Pin, Calendar, ArrowUpRight, Target } from 'lucide-react';
 import { SpeechDetailModal } from './SpeechDetailModal';
 import { NewsDetailModal } from './NewsDetailModal';
+import { VisiMisiDetailModal } from './VisiMisiDetailModal';
 
 interface PrincipalSectionProps {
   principal: PrincipalConfig;
@@ -10,6 +11,11 @@ interface PrincipalSectionProps {
   logoUrl?: string;
   articles?: NewsArticle[];
   onSelectArticle?: (article: NewsArticle) => void;
+  visi?: string;
+  misi?: string;
+  visiMisiTitle?: string;
+  visiMisiSubtitle?: string;
+  showVisiMisi?: boolean;
 }
 
 // Helper to parse date string or timestamp for accurate sorting
@@ -46,8 +52,14 @@ export const PrincipalSection: React.FC<PrincipalSectionProps> = ({
   logoUrl,
   articles = [],
   onSelectArticle,
+  visi = '',
+  misi = '',
+  visiMisiTitle = 'Visi & Misi Instansi',
+  visiMisiSubtitle = '',
+  showVisiMisi = true,
 }) => {
   const [modalOpen, setModalOpen] = useState(false);
+  const [visiMisiOpen, setVisiMisiOpen] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
 
   const handleArticleClick = (art: NewsArticle) => {
@@ -168,18 +180,30 @@ export const PrincipalSection: React.FC<PrincipalSectionProps> = ({
               </div>
 
               {/* Bottom bar */}
-              <div className="mt-5 pt-3 border-t border-slate-200/70 flex items-center justify-between">
-                <span className="text-xs text-slate-500 font-medium truncate max-w-[200px]">
+              <div className="mt-5 pt-3 border-t border-slate-200/70 flex items-center justify-between gap-2">
+                <span className="text-xs text-slate-500 font-medium truncate max-w-[110px] xl:max-w-[200px]">
                   {principal.name || principal.title || 'Kepala Sekolah'}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-2xs hover:shadow transition-all cursor-pointer"
-                >
-                  <span>Baca Sambutan Lengkap</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  {showVisiMisi && (
+                    <button
+                      type="button"
+                      onClick={() => setVisiMisiOpen(true)}
+                      className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-2xs hover:shadow transition-all cursor-pointer"
+                    >
+                      <Target className="w-3.5 h-3.5" />
+                      <span>Visi & Misi</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg shadow-2xs hover:shadow transition-all cursor-pointer"
+                  >
+                    <span>Baca Sambutan</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -404,14 +428,26 @@ export const PrincipalSection: React.FC<PrincipalSectionProps> = ({
                 <p className="text-sm text-slate-600 italic border-l-3 border-blue-600 pl-3">
                   "{principal.quote}"
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-2xs mt-3 cursor-pointer"
-                >
-                  <span>Baca Sambutan Lengkap</span>
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
+                <div className="flex items-center gap-2 mt-3">
+                  {showVisiMisi && (
+                    <button
+                      type="button"
+                      onClick={() => setVisiMisiOpen(true)}
+                      className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-2xs cursor-pointer"
+                    >
+                      <Target className="w-3.5 h-3.5" />
+                      <span>Lihat Visi & Misi</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-2xs cursor-pointer"
+                  >
+                    <span>Baca Sambutan Lengkap</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -470,11 +506,25 @@ export const PrincipalSection: React.FC<PrincipalSectionProps> = ({
             </div>
 
             {/* Button / Trigger */}
-            <div className="mt-2 pt-1.5 border-t border-slate-200/60">
-              <div className="w-full py-1.5 px-2 bg-blue-600 group-hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 shadow-2xs">
+            <div className="mt-2 pt-1.5 border-t border-slate-200/60 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+              {showVisiMisi && (
+                <button
+                  type="button"
+                  onClick={() => setVisiMisiOpen(true)}
+                  className="flex-1 py-1.5 px-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[9px] font-extrabold flex items-center justify-center gap-0.5 shadow-2xs cursor-pointer"
+                >
+                  <Target className="w-2.5 h-2.5" />
+                  <span>Visi Misi</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
+                className="flex-1 py-1.5 px-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[9px] font-extrabold flex items-center justify-center gap-0.5 shadow-2xs cursor-pointer"
+              >
                 <span>Sambutan</span>
-                <ChevronRight className="w-3 h-3" />
-              </div>
+                <ChevronRight className="w-2.5 h-2.5" />
+              </button>
             </div>
           </div>
 
@@ -647,6 +697,19 @@ export const PrincipalSection: React.FC<PrincipalSectionProps> = ({
           schoolName={schoolName}
           logoUrl={logoUrl}
           onClose={() => setModalOpen(false)}
+        />
+      )}
+
+      {/* Visi Misi Detail Modal */}
+      {visiMisiOpen && (
+        <VisiMisiDetailModal
+          visi={visi}
+          misi={misi}
+          title={visiMisiTitle}
+          subtitle={visiMisiSubtitle}
+          schoolName={schoolName}
+          logoUrl={logoUrl}
+          onClose={() => setVisiMisiOpen(false)}
         />
       )}
 

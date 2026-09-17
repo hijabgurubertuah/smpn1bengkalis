@@ -54,6 +54,7 @@ export const DEFAULT_SCHOOL_CONFIG: SchoolConfig = {
     showVideoEmbed: false,
     showMapEmbed: false,
     showPublicComments: true,
+    showVisiMisi: true,
   },
   mobileBottomNav: {
     enabled: true,
@@ -125,6 +126,10 @@ export const DEFAULT_SCHOOL_CONFIG: SchoolConfig = {
     autoCreateFolder: true,
     testStatus: 'untested',
   },
+  visi: "Terwujudnya insan yang berakhlak mulia, cerdas, berprestasi, kreatif, mandiri, dan berwawasan lingkungan.",
+  misi: "Menanamkan nilai-nilai keimanan dan ketakwaan melalui pembiasaan kegiatan keagamaan di sekolah.\nMenyelenggarakan pembelajaran yang aktif, inovatif, kreatif, efektif, dan menyenangkan.\nMengembangkan potensi akademik dan non-akademik secara optimal sesuai bakat dan minat peserta didik.\nMembina kemandirian, kedisiplinan, dan budi pekerti luhur dalam kehidupan sehari-hari.\nMewujudkan lingkungan sekolah yang bersih, sehat, rindang, asri, dan peduli terhadap pelestarian alam.",
+  visiMisiTitle: "Visi & Misi Instansi",
+  visiMisiSubtitle: "Arah pandang dan komitmen dedikasi dalam mewujudkan generasi penerus yang unggul dan berkarakter.",
 };
 
 // Empty default articles: all articles are loaded purely from Firebase and cache

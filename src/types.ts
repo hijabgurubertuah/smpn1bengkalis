@@ -153,6 +153,7 @@ export interface LayoutSections {
   showVideoEmbed: boolean;
   showMapEmbed: boolean;
   showPublicComments?: boolean;
+  showVisiMisi?: boolean;
 }
 
 export interface CommentItem {
@@ -297,6 +298,10 @@ export interface SchoolConfig {
   ekskulTabTitle?: string;
   facilitiesSectionTitle?: string;
   facilitiesSectionSubtitle?: string;
+  visi?: string;
+  misi?: string;
+  visiMisiTitle?: string;
+  visiMisiSubtitle?: string;
 }
 
 export interface NewsArticle {

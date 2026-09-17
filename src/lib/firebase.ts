@@ -119,6 +119,12 @@ export function normalizeSchoolConfig(raw: Partial<SchoolConfig> | null | undefi
     newsCategories: Array.isArray(sanitizedRaw.newsCategories) && sanitizedRaw.newsCategories.length > 0
       ? sanitizedRaw.newsCategories
       : DEFAULT_SCHOOL_CONFIG.newsCategories,
+    facilitiesSectionTitle: sanitizedRaw.facilitiesSectionTitle !== undefined ? sanitizedRaw.facilitiesSectionTitle : DEFAULT_SCHOOL_CONFIG.facilitiesSectionTitle,
+    facilitiesSectionSubtitle: sanitizedRaw.facilitiesSectionSubtitle !== undefined ? sanitizedRaw.facilitiesSectionSubtitle : DEFAULT_SCHOOL_CONFIG.facilitiesSectionSubtitle,
+    visi: sanitizedRaw.visi !== undefined ? sanitizedRaw.visi : DEFAULT_SCHOOL_CONFIG.visi,
+    misi: sanitizedRaw.misi !== undefined ? sanitizedRaw.misi : DEFAULT_SCHOOL_CONFIG.misi,
+    visiMisiTitle: sanitizedRaw.visiMisiTitle !== undefined ? sanitizedRaw.visiMisiTitle : DEFAULT_SCHOOL_CONFIG.visiMisiTitle,
+    visiMisiSubtitle: sanitizedRaw.visiMisiSubtitle !== undefined ? sanitizedRaw.visiMisiSubtitle : DEFAULT_SCHOOL_CONFIG.visiMisiSubtitle,
   };
 }
 

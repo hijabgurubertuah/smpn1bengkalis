@@ -69,6 +69,7 @@ export const AdminLayoutTab: React.FC<AdminLayoutTabProps> = ({ config, onChange
     { key: 'showAccreditation', title: 'Pita Akreditasi & NPSN' },
     { key: 'showQuickStats', title: 'Kartu Statistik Hero' },
     { key: 'showPrincipalSpeech', title: 'Sambutan Pimpinan' },
+    { key: 'showVisiMisi', title: 'Visi & Misi Instansi (Bawah Sambutan)' },
     { key: 'showNews', title: 'Berita & Pengumuman' },
     { key: 'showAgenda', title: 'Agenda & Kegiatan' },
     { key: 'showFacilities', title: 'Fasilitas Instansi' },

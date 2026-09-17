@@ -489,6 +489,11 @@ export default function App() {
           logoUrl={config.identity.logoUrl}
           articles={articles}
           onSelectArticle={setSelectedArticle}
+          visi={config.visi}
+          misi={config.misi}
+          visiMisiTitle={config.visiMisiTitle}
+          visiMisiSubtitle={config.visiMisiSubtitle}
+          showVisiMisi={layoutSections.showVisiMisi}
         />
       )}
 
