@@ -1,9 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SchoolConfig, NewsArticle } from '../../types';
-import { AlertTriangle, Megaphone, Bell, Sparkles, X, Calendar, FileText, Image as ImageIcon } from 'lucide-react';
+import { AlertTriangle, Megaphone, Bell, Sparkles, X, Calendar, FileText, Image as ImageIcon, Clock, Pause, Play } from 'lucide-react';
 import { NewsDetailModal } from './NewsDetailModal';
 import { useBodyScrollLock } from '../../lib/useBodyScrollLock';
 import { FormattedContentRenderer } from '../common/FormattedContentRenderer';
+
+export const checkIsAnnouncementExpired = (validUntil?: string): boolean => {
+  if (!validUntil || !validUntil.trim()) return false;
+  try {
+    const raw = validUntil.trim();
+    let expiryTime: number;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      // YYYY-MM-DD -> Berakhir pada akhir hari tersebut (23:59:59)
+      const [year, month, day] = raw.split('-').map(Number);
+      expiryTime = new Date(year, month - 1, day, 23, 59, 59, 999).getTime();
+    } else {
+      expiryTime = new Date(raw).getTime();
+    }
+    return !isNaN(expiryTime) && Date.now() > expiryTime;
+  } catch {
+    return false;
+  }
+};
 
 interface ImportantNoticeBannerProps {
   config: SchoolConfig;
@@ -18,28 +36,33 @@ export const ImportantNoticeBanner: React.FC<ImportantNoticeBannerProps> = ({
 }) => {
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
   const [showCustomModal, setShowCustomModal] = useState(false);
+  const [autoCloseRemaining, setAutoCloseRemaining] = useState<number | null>(null);
+  const [isTimerPaused, setIsTimerPaused] = useState(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Lock body scroll when custom modal is open
   useBodyScrollLock(showCustomModal);
 
   const announcement = config.importantAnnouncement;
 
-  if (!announcement || announcement.enabled === false) {
-    return null;
-  }
+  // Cek apakah pengumuman dinonaktifkan atau telah kedaluwarsa
+  const isExpired = checkIsAnnouncementExpired(announcement?.validUntil);
 
-  const badgeText = announcement.badge || 'INFO PENTING';
-  const textMessage = announcement.text?.trim() || '';
-
-  if (!textMessage) {
-    return null;
-  }
-
-  const handleOpenDetail = () => {
+  const handleOpenDetail = (isAutoTrigger = false) => {
+    if (!announcement) return;
     const mode = announcement.popupMode || (announcement.targetArticleId ? 'article' : (announcement.detailContent || announcement.detailTitle ? 'custom' : 'article'));
 
     if (mode === 'none') {
       return;
+    }
+
+    // Set auto-close timer jika durasi ditentukan (> 0)
+    const duration = typeof announcement.autoPopupDuration === 'number' ? announcement.autoPopupDuration : 0;
+    if (duration > 0 && isAutoTrigger) {
+      setAutoCloseRemaining(duration);
+      setIsTimerPaused(false);
+    } else {
+      setAutoCloseRemaining(null);
     }
 
     if (mode === 'article' && announcement.targetArticleId && articles.length > 0) {
@@ -58,6 +81,62 @@ export const ImportantNoticeBanner: React.FC<ImportantNoticeBannerProps> = ({
       setShowCustomModal(true);
     }
   };
+
+  // Auto-Popup saat pengunjung pertama kali membuka web (jika autoPopupEnabled aktif & belum kedaluwarsa)
+  useEffect(() => {
+    if (!announcement || announcement.enabled === false || isExpired) return;
+    if (announcement.autoPopupEnabled !== true) return;
+
+    // Gunakan sessionStorage agar tidak mengganggu terus-menerus di setiap klik halaman dalam 1 sesi,
+    // namun tetap muncul saat pengunjung membuka tab / browser baru
+    const sessionKey = `autopopup_seen_${announcement.validUntil || ''}_${announcement.badge || ''}_${(announcement.text || '').slice(0, 15)}`;
+    try {
+      const alreadySeen = sessionStorage.getItem(sessionKey);
+      if (alreadySeen === 'true') return;
+    } catch {}
+
+    const triggerTimer = setTimeout(() => {
+      handleOpenDetail(true);
+      try {
+        sessionStorage.setItem(sessionKey, 'true');
+      } catch {}
+    }, 850);
+
+    return () => clearTimeout(triggerTimer);
+  }, [announcement?.enabled, announcement?.autoPopupEnabled, announcement?.validUntil, isExpired]);
+
+  // Efek Countdown Timer Auto-Close
+  useEffect(() => {
+    if (autoCloseRemaining === null) return;
+
+    if (autoCloseRemaining <= 0) {
+      setShowCustomModal(false);
+      setSelectedArticle(null);
+      setAutoCloseRemaining(null);
+      return;
+    }
+
+    if (isTimerPaused) return;
+
+    timerRef.current = setTimeout(() => {
+      setAutoCloseRemaining((prev) => (prev !== null ? prev - 1 : null));
+    }, 1000);
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [autoCloseRemaining, isTimerPaused]);
+
+  if (!announcement || announcement.enabled === false || isExpired) {
+    return null;
+  }
+
+  const badgeText = announcement.badge || 'INFO PENTING';
+  const textMessage = announcement.text?.trim() || '';
+
+  if (!textMessage) {
+    return null;
+  }
 
   // Animation speed duration
   const getSpeedDuration = () => {
@@ -159,6 +238,11 @@ export const ImportantNoticeBanner: React.FC<ImportantNoticeBannerProps> = ({
 
   const isSticky = announcement.isSticky === true;
 
+  const totalDuration = typeof announcement.autoPopupDuration === 'number' ? announcement.autoPopupDuration : 0;
+  const progressPercent = totalDuration > 0 && autoCloseRemaining !== null
+    ? Math.max(0, Math.min(100, (autoCloseRemaining / totalDuration) * 100))
+    : 0;
+
   return (
     <>
       <div
@@ -173,7 +257,7 @@ export const ImportantNoticeBanner: React.FC<ImportantNoticeBannerProps> = ({
           {/* Clickable Badge Label */}
           <button
             type="button"
-            onClick={handleOpenDetail}
+            onClick={() => handleOpenDetail(false)}
             className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-[10px] sm:text-xs uppercase tracking-wider shrink-0 shadow-xs border cursor-pointer active:scale-95 transition-all group ${themeStyle.badgeBg}`}
             title="Klik untuk membuka detail pengumuman"
           >
@@ -183,7 +267,7 @@ export const ImportantNoticeBanner: React.FC<ImportantNoticeBannerProps> = ({
 
           {/* Marquee Running Text Track (Clickable to open popup) */}
           <div
-            onClick={handleOpenDetail}
+            onClick={() => handleOpenDetail(false)}
             className="overflow-hidden whitespace-nowrap flex-1 min-w-0 relative cursor-pointer group/track"
             title="Klik untuk melihat pengumuman selengkapnya"
           >
@@ -210,44 +294,87 @@ export const ImportantNoticeBanner: React.FC<ImportantNoticeBannerProps> = ({
       {!onSelectArticle && selectedArticle && (
         <NewsDetailModal
           article={selectedArticle}
-          onClose={() => setSelectedArticle(null)}
+          onClose={() => {
+            setSelectedArticle(null);
+            setAutoCloseRemaining(null);
+          }}
         />
       )}
 
       {/* Custom Info Penting Detail Popup Modal */}
       {showCustomModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200"
-          onClick={() => setShowCustomModal(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/75 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => {
+            setShowCustomModal(false);
+            setAutoCloseRemaining(null);
+          }}
         >
           <div
-            className="bg-white rounded-2xl shadow-xl border border-slate-200/80 w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden relative animate-in zoom-in-95 duration-200"
+            className="bg-white rounded-2xl shadow-2xl border border-slate-200/80 w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden relative animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
+            onMouseEnter={() => setIsTimerPaused(true)}
+            onMouseLeave={() => setIsTimerPaused(false)}
           >
+            {/* Progress bar countdown timer jika aktif */}
+            {autoCloseRemaining !== null && autoCloseRemaining > 0 && (
+              <div className="h-1 w-full bg-slate-100 overflow-hidden shrink-0">
+                <div
+                  className="h-full bg-amber-500 transition-all duration-1000 ease-linear"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+            )}
+
             {/* Modal Header - Thin Compact Frame */}
             <div className="px-3.5 sm:px-5 py-2.5 sm:py-3 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2.5 min-w-0 pr-2">
                 <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 shrink-0">
                   <Megaphone className="w-4 h-4" />
                 </div>
-                <div>
-                  <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800">
-                    {badgeText}
-                  </span>
-                  <h3 className="font-extrabold text-sm sm:text-base text-slate-900 leading-tight">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-800">
+                      {badgeText}
+                    </span>
+                    {autoCloseRemaining !== null && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                        <Clock className="w-3 h-3 text-amber-600" />
+                        <span>Tutup dalam {autoCloseRemaining}s</span>
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="font-extrabold text-sm sm:text-base text-slate-900 leading-tight truncate mt-0.5">
                     {announcement.detailTitle || badgeText}
                   </h3>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setShowCustomModal(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
-                aria-label="Tutup Detail"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-1 shrink-0">
+                {autoCloseRemaining !== null && (
+                  <button
+                    type="button"
+                    onClick={() => setIsTimerPaused(!isTimerPaused)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+                    title={isTimerPaused ? 'Lanjutkan Timer' : 'Jeda Timer'}
+                    aria-label="Jeda Timer"
+                  >
+                    {isTimerPaused ? <Play className="w-4 h-4 text-emerald-600" /> : <Pause className="w-4 h-4" />}
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCustomModal(false);
+                    setAutoCloseRemaining(null);
+                  }}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+                  aria-label="Tutup Detail"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Modal Body - Spacious Content Area */}

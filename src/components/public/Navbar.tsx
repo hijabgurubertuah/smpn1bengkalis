@@ -125,7 +125,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           id="mobile-menu-backdrop"
           onClick={() => setMobileMenuOpen(false)}
           onTouchStart={() => setMobileMenuOpen(false)}
-          className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-35 lg:hidden animate-in fade-in duration-200"
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-40 lg:hidden animate-in fade-in duration-200"
           aria-hidden="true"
         />
       )}
@@ -134,7 +134,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         ref={navRef}
         id="main-navbar"
         style={navbarBg ? { backgroundColor: navbarBg } : undefined}
-        className={`sticky top-0 z-40 transition-all duration-200 ${
+        className={`sticky top-0 z-50 transition-all duration-200 ${
           scrolled
             ? 'shadow-md border-b border-slate-200/80'
             : 'border-b border-slate-100 shadow-xs'

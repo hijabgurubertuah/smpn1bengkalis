@@ -101,7 +101,7 @@ export const NewsSection: React.FC<NewsSectionProps> = ({
     return () => window.removeEventListener('popstate', checkUrlForPost);
   }, [articles, onSelectArticle]);
 
-  // Layout Columns state (1, 2, 3, or 4 columns, default 2)
+  // Layout Columns state (1, 2, 3, or 4 columns, default 4: 2 cols on mobile hp, 4 cols on desktop)
   const [layoutColumns, setLayoutColumns] = useState<1 | 2 | 3 | 4>(() => {
     try {
       const saved = localStorage.getItem('public_news_layout_cols');
@@ -111,7 +111,7 @@ export const NewsSection: React.FC<NewsSectionProps> = ({
     } catch {
       // ignore
     }
-    return 2;
+    return 4;
   });
 
   const handleCycleLayout = () => {
@@ -286,8 +286,8 @@ export const NewsSection: React.FC<NewsSectionProps> = ({
                 : layoutColumns === 2
                 ? 'grid grid-cols-2 gap-2.5 sm:gap-4 md:gap-6'
                 : layoutColumns === 3
-                ? 'grid grid-cols-3 gap-2 sm:gap-3.5 md:gap-5 lg:gap-6'
-                : 'grid grid-cols-4 gap-1.5 sm:gap-3 md:gap-4 lg:gap-5'
+                ? 'grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3.5 md:gap-5 lg:gap-6'
+                : 'grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3.5 md:gap-4 lg:gap-5'
             }
           >
             {filteredArticles.map((article) => (

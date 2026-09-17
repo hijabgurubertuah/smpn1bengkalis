@@ -6,10 +6,18 @@ import {
   PenTool,
   Slash,
   Check,
+  Calendar,
+  Clock,
+  Sparkles,
+  AlertCircle,
+  CalendarOff,
+  CheckCircle2,
+  X,
 } from 'lucide-react';
 import { ImageUploadButton } from './ImageUploadButton';
 import { RichTextEditorWithImages } from '../common/RichTextEditorWithImages';
 import { AutoResizeTextarea } from '../common/AutoResizeTextarea';
+import { checkIsAnnouncementExpired } from '../public/ImportantNoticeBanner';
 
 interface AdminTickerTabProps {
   config: SchoolConfig;
@@ -226,7 +234,7 @@ export const AdminTickerTab: React.FC<AdminTickerTabProps> = ({ config, articles
               <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/50 space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-slate-800">
-                    Popup
+                    Popup & Otomatisasi
                   </label>
                 </div>
 
@@ -273,7 +281,7 @@ export const AdminTickerTab: React.FC<AdminTickerTabProps> = ({ config, articles
                 </div>
 
                 {/* Tab Body */}
-                <div className="bg-white rounded-lg p-3 border border-slate-200">
+                <div className="bg-white rounded-lg p-3 border border-slate-200 space-y-3">
                   
                   {/* TAB 1: BERITA */}
                   {activePopupTab === 'article' && (
@@ -341,11 +349,173 @@ export const AdminTickerTab: React.FC<AdminTickerTabProps> = ({ config, articles
 
                   {/* TAB 3: NONAKTIF */}
                   {activePopupTab === 'none' && (
-                    <div className="py-2.5 text-center text-xs text-slate-400">
+                    <div className="py-2 text-center text-xs text-slate-400">
                       Teks berjalan tanpa aksi klik popup.
                     </div>
                   )}
 
+                  {/* PENGATURAN AUTO POPUP & DURASI TIMER */}
+                  {activePopupTab !== 'none' && (
+                    <div className="pt-3 border-t border-slate-100 space-y-3">
+                      
+                      {/* Toggle Auto Popup on Visit */}
+                      <div className="flex items-center justify-between p-2.5 bg-amber-50/60 rounded-lg border border-amber-200/60">
+                        <div className="pr-2">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-amber-950">
+                            <Sparkles className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <span>Buka Popup Otomatis di Awal</span>
+                          </div>
+                          <p className="text-[11px] text-amber-800/90 mt-0.5 leading-tight">
+                            Langsung muncul otomatis saat pengunjung pertama kali membuka website.
+                          </p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                          <input
+                            type="checkbox"
+                            checked={ann.autoPopupEnabled === true}
+                            onChange={(e) => updateAnn('autoPopupEnabled', e.target.checked)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-8 h-4.5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-amber-600"></div>
+                        </label>
+                      </div>
+
+                      {/* Durasi Popup Keluar Sendiri */}
+                      {ann.autoPopupEnabled === true && (
+                        <div className="space-y-1.5 p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+                          <div className="flex items-center justify-between">
+                            <label className="flex items-center gap-1 text-xs font-semibold text-slate-700">
+                              <Clock className="w-3.5 h-3.5 text-slate-500" />
+                              <span>Waktu Popup Keluar Sendiri (Detik)</span>
+                            </label>
+                            <span className="text-xs font-mono font-bold text-blue-700">
+                              {(ann.autoPopupDuration ?? 10) === 0 ? 'Manual (Pengunjung Tutup Sendiri)' : `${ann.autoPopupDuration ?? 10} Detik`}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {[
+                              { label: 'Manual (0s)', val: 0 },
+                              { label: '5s', val: 5 },
+                              { label: '10s', val: 10 },
+                              { label: '15s', val: 15 },
+                              { label: '20s', val: 20 },
+                              { label: '30s', val: 30 },
+                            ].map((item) => {
+                              const currentVal = ann.autoPopupDuration ?? 10;
+                              const isSelected = currentVal === item.val;
+                              return (
+                                <button
+                                  key={item.val}
+                                  type="button"
+                                  onClick={() => updateAnn('autoPopupDuration', item.val)}
+                                  className={`px-2.5 py-1 text-xs rounded-md font-semibold cursor-pointer transition-all ${
+                                    isSelected
+                                      ? 'bg-blue-600 text-white shadow-2xs'
+                                      : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
+                                  }`}
+                                >
+                                  {item.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <p className="text-[10px] text-slate-500 pt-0.5">
+                            *Jika dipilih 10s, popup otomatis akan tertutup sendiri dalam 10 detik dengan hitung mundur visual.
+                          </p>
+                        </div>
+                      )}
+
+                    </div>
+                  )}
+
+                </div>
+              </div>
+
+              {/* =============================================================== */}
+              {/* PENGATURAN BATAS TANGGAL BERLAKU (EXPIRY DATE) */}
+              {/* =============================================================== */}
+              <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/60 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+                    <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Batas Tanggal Berlaku (Auto Berhenti)</span>
+                  </label>
+                  {ann.validUntil && (
+                    <button
+                      type="button"
+                      onClick={() => updateAnn('validUntil', '')}
+                      className="text-[10px] text-rose-600 hover:text-rose-800 font-semibold flex items-center gap-0.5 cursor-pointer"
+                      title="Hapus batas waktu agar aktif selamanya"
+                    >
+                      <X className="w-3 h-3" />
+                      <span>Hapus Batas</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      value={ann.validUntil || ''}
+                      onChange={(e) => updateAnn('validUntil', e.target.value)}
+                      className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold focus:ring-1 focus:ring-amber-500 focus:outline-none bg-white text-slate-900 cursor-pointer shadow-2xs"
+                    />
+                  </div>
+
+                  {/* Preset Cepat Tambah Hari */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[11px] text-slate-500 font-medium">Set cepat:</span>
+                    {[
+                      { label: '+3 Hari', days: 3 },
+                      { label: '+7 Hari', days: 7 },
+                      { label: '+14 Hari', days: 14 },
+                      { label: '+30 Hari', days: 30 },
+                    ].map((btn) => (
+                      <button
+                        key={btn.days}
+                        type="button"
+                        onClick={() => {
+                          const d = new Date();
+                          d.setDate(d.getDate() + btn.days);
+                          const yyyy = d.getFullYear();
+                          const mm = String(d.getMonth() + 1).padStart(2, '0');
+                          const dd = String(d.getDate()).padStart(2, '0');
+                          updateAnn('validUntil', `${yyyy}-${mm}-${dd}`);
+                        }}
+                        className="px-2 py-0.5 text-[11px] rounded bg-white hover:bg-amber-50 text-slate-700 hover:text-amber-800 border border-slate-200 hover:border-amber-300 font-medium cursor-pointer transition-colors shadow-2xs"
+                      >
+                        {btn.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Status Indicator */}
+                  <div className="pt-1">
+                    {ann.validUntil ? (
+                      checkIsAnnouncementExpired(ann.validUntil) ? (
+                        <div className="flex items-start gap-1.5 p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-xs font-semibold">
+                          <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                          <div>
+                            <div>⚠️ Telah Berakhir pada {ann.validUntil}</div>
+                            <p className="text-[11px] font-normal text-rose-700 mt-0.5 leading-tight">
+                              Running Teks 1 dan Popup Otomatis saat ini dinonaktifkan di halaman publik karena sudah melewati batas tanggal.
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>Aktif sampai {ann.validUntil} (Otomatis berhenti setelah tanggal ini)</span>
+                        </div>
+                      )
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500 bg-white p-2 rounded-lg border border-slate-200">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                        <span>Aktif Permanen (Tanpa batas waktu tanggal berhenti)</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 

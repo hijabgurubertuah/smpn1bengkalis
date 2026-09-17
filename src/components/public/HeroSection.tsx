@@ -215,7 +215,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ config }) => {
 
       {/* Floating 4 Stat Cards */}
       {hasQuickStats && (
-        <div className="relative z-40 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -translate-y-1/2 -mb-[74px] sm:-mb-[80px] md:-mb-8 lg:-mb-10">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -translate-y-1/2 -mb-[74px] sm:-mb-[80px] md:-mb-8 lg:-mb-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-5">
             {header.highlights.map((stat) => {
               const useGrad = !!themeConfig?.statCardUseGradient;

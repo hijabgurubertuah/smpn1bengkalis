@@ -96,6 +96,9 @@ export interface ImportantAnnouncement {
   detailContent?: string;
   detailImageUrl?: string;
   popupMode?: 'article' | 'custom' | 'none';
+  autoPopupEnabled?: boolean;
+  autoPopupDuration?: number; // dalam detik (0 = manual tutup)
+  validUntil?: string; // Tanggal batas waktu aktif (YYYY-MM-DD atau ISO string)
 }
 
 export interface HeaderConfig {
