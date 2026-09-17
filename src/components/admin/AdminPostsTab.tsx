@@ -33,7 +33,6 @@ import { RichTextEditorWithImages } from '../common/RichTextEditorWithImages';
 import { AutoResizeTextarea } from '../common/AutoResizeTextarea';
 import { parseEmbedUrl } from '../../lib/embedHelper';
 import { useBodyScrollLock } from '../../lib/useBodyScrollLock';
-import { saveNewsCategories } from '../../lib/firebase';
 
 const getTodayDateIndo = (): string => {
   const months = [
@@ -63,7 +62,6 @@ interface AdminPostsTabProps {
   onSaveArticleLocally?: (article: NewsArticle) => Promise<void>;
   onDeleteArticle: (articleId: string) => Promise<void>;
   onUpdateCategories?: (categories: string[]) => void;
-  onSaveCategoriesToCloud?: (categories: string[]) => Promise<boolean>;
 }
 
 export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
@@ -73,7 +71,6 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
   onSaveArticleLocally,
   onDeleteArticle,
   onUpdateCategories,
-  onSaveCategoriesToCloud,
 }) => {
   const activeCategories =
     categories && categories.length > 0 ? categories : DEFAULT_CATEGORIES;
@@ -90,8 +87,6 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
   const [newCategoryInput, setNewCategoryInput] = useState('');
   const [editingCatIndex, setEditingCatIndex] = useState<number | null>(null);
   const [editingCatValue, setEditingCatValue] = useState('');
-  const [isSyncingCategories, setIsSyncingCategories] = useState(false);
-  const [hasUnsavedCategoryChanges, setHasUnsavedCategoryChanges] = useState(false);
 
   // Form states
   const [title, setTitle] = useState('');
@@ -143,7 +138,6 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
       return;
     }
     const updated = [...activeCategories, trimmed];
-    setHasUnsavedCategoryChanges(true);
     if (onUpdateCategories) {
       onUpdateCategories(updated);
     }
@@ -151,9 +145,9 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
     setCategory(trimmed);
     setFeedbackToast({
       type: 'success',
-      message: `Kategori "${trimmed}" ditambahkan. Klik "Simpan ke Firebase" untuk menyinkronkan.`,
+      message: `Kategori "${trimmed}" berhasil ditambahkan.`,
     });
-    setTimeout(() => setFeedbackToast(null), 3000);
+    setTimeout(() => setFeedbackToast(null), 2500);
   };
 
   const handleStartEditCategory = (index: number) => {
@@ -168,7 +162,6 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
     const updated = [...activeCategories];
     updated[index] = trimmed;
 
-    setHasUnsavedCategoryChanges(true);
     if (onUpdateCategories) {
       onUpdateCategories(updated);
     }
@@ -188,9 +181,9 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
     setEditingCatValue('');
     setFeedbackToast({
       type: 'success',
-      message: `Kategori "${oldName}" diubah menjadi "${trimmed}". Klik "Simpan ke Firebase" untuk menyinkronkan.`,
+      message: `Kategori "${oldName}" berhasil diubah menjadi "${trimmed}".`,
     });
-    setTimeout(() => setFeedbackToast(null), 3000);
+    setTimeout(() => setFeedbackToast(null), 2500);
   };
 
   const handleDeleteCategory = (index: number) => {
@@ -204,7 +197,6 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
     }
     const catToRemove = activeCategories[index];
     const updated = activeCategories.filter((_, i) => i !== index);
-    setHasUnsavedCategoryChanges(true);
     if (onUpdateCategories) {
       onUpdateCategories(updated);
     }
@@ -213,43 +205,9 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
     }
     setFeedbackToast({
       type: 'success',
-      message: `Kategori "${catToRemove}" dihapus. Klik "Simpan ke Firebase" untuk menyinkronkan.`,
+      message: `Kategori "${catToRemove}" dihapus.`,
     });
-    setTimeout(() => setFeedbackToast(null), 3000);
-  };
-
-  const handleSaveCategoriesToFirebase = async () => {
-    setIsSyncingCategories(true);
-    try {
-      let success = false;
-      if (onSaveCategoriesToCloud) {
-        success = await onSaveCategoriesToCloud(activeCategories);
-      } else {
-        success = await saveNewsCategories(activeCategories);
-      }
-
-      if (success) {
-        setHasUnsavedCategoryChanges(false);
-        setFeedbackToast({
-          type: 'success',
-          message: 'Kategori berita berhasil disimpan dan disinkronkan ke Firebase!',
-        });
-      } else {
-        setFeedbackToast({
-          type: 'success',
-          message: 'Kategori tersimpan di penyimpanan lokal browser Anda.',
-        });
-      }
-    } catch (err) {
-      console.error('Gagal sinkron kategori ke Firebase:', err);
-      setFeedbackToast({
-        type: 'error',
-        message: 'Gagal menyinkronkan kategori ke Firebase.',
-      });
-    } finally {
-      setIsSyncingCategories(false);
-      setTimeout(() => setFeedbackToast(null), 3000);
-    }
+    setTimeout(() => setFeedbackToast(null), 2500);
   };
 
   const handleIframeInputChange = (rawHtml: string) => {
@@ -1164,20 +1122,6 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
                     <span>Cloud ({cloudArticles.length})</span>
                   </button>
                 </div>
-
-                {/* Tombol Kelola Kategori */}
-                <button
-                  type="button"
-                  onClick={() => setIsCategoryModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer border border-slate-200"
-                  title="Buka Pengaturan Kategori Berita"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Kategori ({activeCategories.length})</span>
-                  {hasUnsavedCategoryChanges && (
-                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                  )}
-                </button>
               </div>
 
               <div className="relative w-full sm:w-64">
@@ -1406,28 +1350,15 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
       {/* Category Management Modal */}
       {isCategoryModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs overscroll-contain touch-none animate-in fade-in duration-150">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95 duration-150">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-5 animate-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-bold text-slate-900">Pengaturan Kategori Berita</h3>
-                    {hasUnsavedCategoryChanges ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 animate-pulse">
-                        <AlertTriangle className="w-3 h-3" />
-                        Belum Disinkron
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Tersinkron ke Firebase
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-500">Tambah, ubah nama, hapus, dan simpan kategori ke Firebase Cloud</p>
+                  <h3 className="text-base font-bold text-slate-900">Kelola Kategori Berita</h3>
+                  <p className="text-xs text-slate-500">Tambah, ubah nama, atau hapus kategori</p>
                 </div>
               </div>
               <button
@@ -1438,7 +1369,6 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
                   setNewCategoryInput('');
                 }}
                 className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer transition-colors"
-                title="Tutup Modal"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1450,7 +1380,7 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
                 type="text"
                 value={newCategoryInput}
                 onChange={(e) => setNewCategoryInput(e.target.value)}
-                placeholder="Tulis nama kategori baru..."
+                placeholder="Nama kategori baru..."
                 className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none bg-white"
               />
               <button
@@ -1464,13 +1394,10 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
             </form>
 
             {/* Daftar Kategori */}
-            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-              <div className="flex items-center justify-between">
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                  Daftar Kategori ({activeCategories.length})
-                </label>
-                <span className="text-[11px] text-slate-400">Klik ikon pensil untuk mengedit</span>
-              </div>
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                Daftar Kategori ({activeCategories.length})
+              </label>
               <div className="space-y-1.5">
                 {activeCategories.map((cat, idx) => (
                   <div
@@ -1483,38 +1410,27 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
                           type="text"
                           value={editingCatValue}
                           onChange={(e) => setEditingCatValue(e.target.value)}
-                          className="flex-1 px-3 py-1.5 rounded-lg border border-blue-500 text-xs sm:text-sm font-bold focus:outline-none bg-white"
+                          className="flex-1 px-3 py-1 rounded-lg border border-blue-500 text-xs font-bold focus:outline-none bg-white"
                           autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleSaveEditCategory(idx);
-                            } else if (e.key === 'Escape') {
-                              setEditingCatIndex(null);
-                            }
-                          }}
                         />
                         <button
                           type="button"
                           onClick={() => handleSaveEditCategory(idx)}
-                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg cursor-pointer transition-colors shadow-xs"
+                          className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg cursor-pointer"
                         >
                           Simpan
                         </button>
                         <button
                           type="button"
                           onClick={() => setEditingCatIndex(null)}
-                          className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg cursor-pointer transition-colors"
+                          className="px-2.5 py-1 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg cursor-pointer"
                         >
                           Batal
                         </button>
                       </div>
                     ) : (
                       <>
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                          <span className="text-xs sm:text-sm font-bold text-slate-800">{cat}</span>
-                        </div>
+                        <span className="text-xs font-bold text-slate-800">{cat}</span>
                         <div className="flex items-center gap-1">
                           <button
                             type="button"
@@ -1540,44 +1456,18 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
               </div>
             </div>
 
-            {/* Footer Actions with Firebase Sync Button */}
-            <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-2.5">
-              <p className="text-[11px] text-slate-500 text-center sm:text-left">
-                {hasUnsavedCategoryChanges
-                  ? '⚠️ Ada perubahan kategori. Klik tombol simpan untuk menyinkronkan.'
-                  : '✅ Kategori telah tersimpan aman di cloud Firebase.'}
-              </p>
-              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsCategoryModalOpen(false);
-                    setEditingCatIndex(null);
-                    setNewCategoryInput('');
-                  }}
-                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                >
-                  Tutup
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveCategoriesToFirebase}
-                  disabled={isSyncingCategories}
-                  className={`inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer ${
-                    hasUnsavedCategoryChanges
-                      ? 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white ring-2 ring-emerald-300 ring-offset-1'
-                      : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white'
-                  } disabled:opacity-50`}
-                  title="Simpan perubahan kategori ke Firebase"
-                >
-                  {isSyncingCategories ? (
-                    <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                  ) : (
-                    <CloudUpload className="w-4 h-4 text-white" />
-                  )}
-                  <span>{isSyncingCategories ? 'Menyinkronkan...' : 'Simpan ke Firebase'}</span>
-                </button>
-              </div>
+            <div className="pt-2 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCategoryModalOpen(false);
+                  setEditingCatIndex(null);
+                  setNewCategoryInput('');
+                }}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              >
+                Selesai
+              </button>
             </div>
           </div>
         </div>

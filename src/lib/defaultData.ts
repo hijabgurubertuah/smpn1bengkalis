@@ -124,14 +124,6 @@ export const DEFAULT_SCHOOL_CONFIG: SchoolConfig = {
     autoCreateFolder: true,
     testStatus: 'untested',
   },
-  newsCategories: [
-    'Prestasi',
-    'Pengumuman',
-    'Kegiatan',
-    'Akademik',
-    'Ekstrakurikuler',
-    'Alumni',
-  ],
 };
 
 // Empty default articles: all articles are loaded purely from Firebase and cache
