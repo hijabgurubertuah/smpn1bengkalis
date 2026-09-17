@@ -144,6 +144,41 @@ export function convertGoogleDriveUrl(url: string): string {
 }
 
 /**
+ * Generates a lightweight, high-speed thumbnail URL for OpenGraph / Social Share cards.
+ * If the image is stored in Google Drive, converts it into a Google CDN cropped thumbnail (=w1200-h630-p) under 100KB.
+ * If it's a Base64 dataUrl, falls back to default school logo because web scrapers cannot parse base64.
+ */
+export function getOptimizedOgImageUrl(
+  url: string | undefined | null,
+  fallbackLogo: string = 'https://i.ibb.co.com/d44hK88L/logo-smpn-1-bengkalis-kecil.png'
+): string {
+  if (!url || typeof url !== 'string' || !url.trim()) {
+    return fallbackLogo;
+  }
+
+  const trimmed = url.trim();
+
+  // Scrapers (WhatsApp, FB) cannot parse base64 data URLs
+  if (trimmed.startsWith('data:')) {
+    return fallbackLogo;
+  }
+
+  // Handle Google Drive links
+  const fileIdMatch =
+    trimmed.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/i) ||
+    trimmed.match(/[?&]id=([a-zA-Z0-9_-]+)/i) ||
+    trimmed.match(/lh3\.googleusercontent\.com\/d\/([a-zA-Z0-9_-]+)/i);
+
+  if (fileIdMatch && fileIdMatch[1]) {
+    const fileId = fileIdMatch[1];
+    // =w1200-h630-p forces Google's CDN to auto-crop & compress the image into 1200x630 OG dimensions (<100KB)
+    return `https://lh3.googleusercontent.com/d/${fileId}=w1200-h630-p`;
+  }
+
+  return trimmed;
+}
+
+/**
  * Format bytes to readable human string
  */
 export function formatFileSize(bytes: number): string {

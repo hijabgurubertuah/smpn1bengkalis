@@ -25,6 +25,7 @@ import { parseEmbedUrl } from '../../lib/embedHelper';
 import { useBodyScrollLock } from '../../lib/useBodyScrollLock';
 import { FormattedContentRenderer } from '../common/FormattedContentRenderer';
 import { openShopeeLink, isShopeeUrl, isMobileDevice } from '../../lib/shopeeHelper';
+import { getOptimizedOgImageUrl } from '../../lib/imageOptimizer';
 import { CommentsSection } from './CommentsSection';
 import {
   toggleLikeArticle,
@@ -186,17 +187,17 @@ const SingleNewsModalView: React.FC<SingleNewsModalViewProps> = ({
 
     const cleanSummary = "Portal Resmi SMP Negeri 1 Bengkalis";
 
-    if (article.coverImage) {
-      setMetaTag('meta[property="og:image"]', 'content', article.coverImage);
-      setMetaTag('meta[name="twitter:image"]', 'content', article.coverImage);
-      let linkImg = document.querySelector('link[rel="image_src"]') as HTMLLinkElement;
-      if (!linkImg) {
-        linkImg = document.createElement('link');
-        linkImg.rel = 'image_src';
-        document.head.appendChild(linkImg);
-      }
-      linkImg.href = article.coverImage;
+    const ogImageUrl = getOptimizedOgImageUrl(article.coverImage);
+
+    setMetaTag('meta[property="og:image"]', 'content', ogImageUrl);
+    setMetaTag('meta[name="twitter:image"]', 'content', ogImageUrl);
+    let linkImg = document.querySelector('link[rel="image_src"]') as HTMLLinkElement;
+    if (!linkImg) {
+      linkImg = document.createElement('link');
+      linkImg.rel = 'image_src';
+      document.head.appendChild(linkImg);
     }
+    linkImg.href = ogImageUrl;
 
     setMetaTag('meta[property="og:title"]', 'content', article.title);
     setMetaTag('meta[name="twitter:title"]', 'content', article.title);
