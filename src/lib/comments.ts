@@ -160,11 +160,13 @@ export function checkProfanity(
     const bad = rawBad.trim().toLowerCase();
     if (!bad) continue;
 
-    // Check direct inclusion or regex boundary check
+    // Strict word boundary check to prevent false positives when bad words appear inside valid Indonesian words
+    // (e.g. "lanjutkan", "belanja", "perjanjian" containing "anj" must NOT be flagged).
+    // Case-insensitive flag 'i' ensures "ANJ", "Anj", and "anj" are treated identically.
     const escaped = bad.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp(`(^|[^a-zA-Z0-9])${escaped}([^a-zA-Z0-9]|$)`, 'i');
+    const regex = new RegExp(`(?:^|[^a-zA-Z0-9_])${escaped}(?=[^a-zA-Z0-9_]|$)`, 'i');
     
-    if (regex.test(normalized) || normalized.includes(bad)) {
+    if (regex.test(normalized)) {
       matchedWords.push(rawBad);
     }
   }
