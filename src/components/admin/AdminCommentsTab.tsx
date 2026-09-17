@@ -23,6 +23,7 @@ import {
   deleteComment,
   moderateComment,
   togglePinComment,
+  getAvatarColorGradient,
 } from '../../lib/comments';
 
 interface AdminCommentsTabProps {
@@ -525,7 +526,7 @@ export const AdminCommentsTab: React.FC<AdminCommentsTabProps> = ({ articles }) 
                                   className="w-8 h-8 rounded-full object-cover border border-slate-200 shrink-0 shadow-2xs mt-0.5"
                                 />
                               ) : (
-                                <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs mt-0.5">
+                                <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${getAvatarColorGradient(item.userName)} text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs mt-0.5`}>
                                   {item.userName.charAt(0).toUpperCase()}
                                 </div>
                               )}

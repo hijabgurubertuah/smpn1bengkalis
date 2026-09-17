@@ -278,6 +278,32 @@ export function subscribeToCommentAuth(callback: (user: CommenterUser | null) =>
 }
 
 /**
+ * Generates a stable, beautiful color gradient based on the user's name
+ */
+export function getAvatarColorGradient(name: string): string {
+  const gradients = [
+    'from-blue-500 to-indigo-600',       // Ocean/Indigo
+    'from-emerald-500 to-teal-600',     // Nature/Teal
+    'from-rose-500 to-pink-600',        // Rose/Pink
+    'from-violet-500 to-fuchsia-600',   // Violet/Fuchsia
+    'from-amber-500 to-orange-600',     // Amber/Orange
+    'from-sky-500 to-blue-600',         // Sky/Blue
+    'from-cyan-500 to-teal-500',        // Cyan/Teal
+    'from-purple-500 to-indigo-600',    // Purple/Indigo
+    'from-pink-500 to-rose-600',        // Pink/Rose
+    'from-teal-500 to-emerald-600',     // Teal/Emerald
+  ];
+
+  let hash = 0;
+  const sanitized = name ? String(name).trim() : 'Guest';
+  for (let i = 0; i < sanitized.length; i++) {
+    hash = sanitized.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % gradients.length;
+  return gradients[index];
+}
+
+/**
  * Stable, persistent identifier for the current browser (stored in localStorage)
  * Guarantees every browser can uniquely like articles and comments without logging in
  */

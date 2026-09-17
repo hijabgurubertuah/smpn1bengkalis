@@ -32,6 +32,7 @@ import {
   subscribeToProfanityFilterConfig,
   updateCommentContent,
   deleteComment,
+  getAvatarColorGradient,
 } from '../../lib/comments';
 
 interface CommentsSectionProps {
@@ -486,7 +487,7 @@ export const CommentsSection: React.FC<CommentsSectionProps> = ({
                 className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover border border-slate-200 shrink-0 shadow-2xs"
               />
             ) : (
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-blue-600 to-indigo-700 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs">
+              <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br ${getAvatarColorGradient(comment.userName)} text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-2xs`}>
                 {comment.userName.charAt(0).toUpperCase()}
               </div>
             )}
