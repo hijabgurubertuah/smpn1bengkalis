@@ -944,23 +944,23 @@ export function getArticleLikesState(
   likedByEmailsOrUserIdentifier?: string[] | string,
   userIdentifier?: string
 ): { likes: number; hasLiked: boolean } {
-  let likedByEmails: string[] = [];
   let browserId = '';
 
   if (Array.isArray(likedByEmailsOrUserIdentifier)) {
-    likedByEmails = likedByEmailsOrUserIdentifier;
+    // If we have the live Firestore likedByEmails array, it is the absolute source of truth!
+    const likedByEmails = likedByEmailsOrUserIdentifier;
     browserId = userIdentifier || getBrowserDeviceId();
-  } else {
-    browserId = likedByEmailsOrUserIdentifier || getBrowserDeviceId();
-  }
-
-  const hasLikedInCloud = likedByEmails.includes(browserId);
-  if (hasLikedInCloud) {
+    const hasLiked = likedByEmails.includes(browserId);
     return {
       likes: Math.max(initialLikes, likedByEmails.length),
-      hasLiked: true,
+      hasLiked,
     };
   }
+
+  // If we don't have the cloud array (e.g., initial render of a component that doesn't pass it, or offline fallback)
+  browserId = typeof likedByEmailsOrUserIdentifier === 'string'
+    ? likedByEmailsOrUserIdentifier
+    : (userIdentifier || getBrowserDeviceId());
 
   if (typeof window !== 'undefined') {
     try {
@@ -971,7 +971,7 @@ export function getArticleLikesState(
           const item = parsed[articleId];
           const hasLikedLocal = browserId ? item.likedUsers?.includes(browserId) : false;
           return {
-            likes: Math.max(initialLikes, item.count || 0),
+            likes: Math.max(initialLikes, item.count !== undefined ? item.count : (item.likedUsers?.length || 0)),
             hasLiked: Boolean(hasLikedLocal),
           };
         }

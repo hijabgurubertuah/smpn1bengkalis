@@ -66,24 +66,24 @@ const SingleNewsModalView: React.FC<SingleNewsModalViewProps> = ({
   const [copiedNotice, setCopiedNotice] = useState(false);
   const [actionConfirmUrl, setActionConfirmUrl] = useState<string | null>(null);
   const [likesState, setLikesState] = useState(() =>
-    getArticleLikesState(article.id, article.likes || 0, article.likedByEmails || [], getBrowserDeviceId())
+    getArticleLikesState(article.id, article.likes || 0, article.likedByEmails, getBrowserDeviceId())
   );
   const [viewsCount, setViewsCount] = useState(() =>
     getArticleViewsCount(article.id, article.views || 0)
   );
-
+ 
   const viewIncrementedRef = useRef(false);
-
+ 
   useEffect(() => {
-    setLikesState(getArticleLikesState(article.id, article.likes || 0, article.likedByEmails || [], getBrowserDeviceId()));
+    setLikesState(getArticleLikesState(article.id, article.likes || 0, article.likedByEmails, getBrowserDeviceId()));
     setViewsCount(getArticleViewsCount(article.id, article.views || 0));
     viewIncrementedRef.current = false;
   }, [article.id, article.likes, article.views, article.likedByEmails]);
-
+ 
   useEffect(() => {
     if (viewIncrementedRef.current) return;
     viewIncrementedRef.current = true;
-
+ 
     let isMounted = true;
     incrementArticleViews(article.id, article.views || 0).then((newCount) => {
       if (isMounted) {
@@ -94,17 +94,17 @@ const SingleNewsModalView: React.FC<SingleNewsModalViewProps> = ({
       isMounted = false;
     };
   }, [article.id]);
-
+ 
   const handleTogglePostLike = () => {
     const userIdentifier = getBrowserDeviceId();
-
+ 
     // Instant optimistic update
     setLikesState((prev) => ({
       likes: prev.hasLiked ? Math.max(0, prev.likes - 1) : prev.likes + 1,
       hasLiked: !prev.hasLiked,
     }));
-
-    toggleLikeArticle(article.id, article.likedByEmails || [], userIdentifier).catch((err) => {
+ 
+    toggleLikeArticle(article.id, article.likedByEmails, userIdentifier).catch((err) => {
       console.warn('Failed to sync post like:', err);
     });
   };
