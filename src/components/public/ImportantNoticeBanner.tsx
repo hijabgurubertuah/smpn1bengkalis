@@ -248,7 +248,7 @@ export const ImportantNoticeBanner: React.FC<ImportantNoticeBannerProps> = ({
       <div
         id="info-penting-running-text"
         className={`overflow-hidden py-2.5 sm:py-3 px-3 sm:px-6 transition-all duration-300 ${
-          isSticky ? 'sticky top-[56px] sm:top-[64px] z-30 shadow-md' : 'relative z-20'
+          isSticky ? 'sticky top-[56px] sm:top-[64px] z-40 shadow-md' : 'relative z-20'
         } ${themeStyle.containerBg}`}
         style={themeStyle.customStyle}
       >

@@ -80,7 +80,7 @@ export const AccreditationRibbon: React.FC<AccreditationRibbonProps> = ({ config
   return (
     <section
       id="akreditasi-running-text"
-      className={`relative z-20 text-white border-y border-white/10 shadow-xs overflow-hidden w-full max-w-full py-2.5 sm:py-3.5 ${
+      className={`relative z-10 text-white border-y border-white/10 shadow-xs overflow-hidden w-full max-w-full py-2.5 sm:py-3.5 ${
         customBg ? '' : 'bg-gradient-to-r from-slate-950 via-blue-950 to-slate-950 border-blue-800/40'
       }`}
       style={customBg ? { backgroundColor: customBg } : undefined}
