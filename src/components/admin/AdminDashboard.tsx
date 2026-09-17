@@ -909,6 +909,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               onSaveArticleLocally={onSaveArticleLocally}
               onDeleteArticle={onDeleteArticle}
               onUpdateCategories={(newCats) => handleConfigUpdate({ ...config, newsCategories: newCats })}
+              onSaveCategoriesToCloud={async (newCats) => {
+                const updatedConfig = { ...config, newsCategories: newCats };
+                handleConfigUpdate(updatedConfig);
+                return await saveSchoolTabConfig('posts', updatedConfig);
+              }}
             />
           </div>
 

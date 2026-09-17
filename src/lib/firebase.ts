@@ -18,6 +18,8 @@ import { DEFAULT_SCHOOL_CONFIG, DEFAULT_NEWS_ARTICLES } from './defaultData';
 import { getOfflineItem, setOfflineItem, clearOfflineStorage } from './offlineStorage';
 import { saveStoredAppsScriptConfig } from './googleAppsScript';
 
+import firebaseConfig from '../../firebase-applet-config.json';
+
 // Silence internal retry and connection warning logs from Firestore in browser/iframe environments
 try {
   setLogLevel('silent');
@@ -26,13 +28,13 @@ try {
 }
 
 const FIREBASE_CONFIG = {
-  projectId: 'gen-lang-client-0999699449',
-  appId: '1:319360539506:web:894f0f9c3612848f8a9beb',
-  apiKey: 'AIzaSyCOZgLPjDQ61WyWptoYS1tVH_zZLsNVeFQ',
-  authDomain: 'gen-lang-client-0999699449.firebaseapp.com',
-  firestoreDatabaseId: 'ai-studio-e8590637-9651-4312-9d0c-eb416143de72',
-  storageBucket: 'gen-lang-client-0999699449.firebasestorage.app',
-  messagingSenderId: '319360539506',
+  projectId: firebaseConfig.projectId || 'lateral-hope-tthv3',
+  appId: firebaseConfig.appId || '1:86435826094:web:9e6bcc0bd6cd12d35ae03f',
+  apiKey: firebaseConfig.apiKey || 'AIzaSyDt7N52r6H-DzarY-7UlcwlIfkQ0nUu6Q4',
+  authDomain: firebaseConfig.authDomain || 'lateral-hope-tthv3.firebaseapp.com',
+  firestoreDatabaseId: firebaseConfig.firestoreDatabaseId || 'ai-studio-websmpn1bengkali-5e1acd1a-2624-4c02-88cd-1246d9058afb',
+  storageBucket: firebaseConfig.storageBucket || 'lateral-hope-tthv3.firebasestorage.app',
+  messagingSenderId: firebaseConfig.messagingSenderId || '86435826094',
 };
 
 // Dual Cache Keys: Separate storage for Public visitors vs Admin authenticated editors
@@ -45,6 +47,7 @@ export const ADMIN_NEWS_KEY = 'smpn1_admin_news_v4';
 export const DEDICATED_POSTS_CACHE_KEY = 'portal_dedicated_posts_v1';
 export const DEDICATED_PRINCIPAL_CACHE_KEY = 'portal_dedicated_principal_v1';
 export const DEDICATED_DOCK_CACHE_KEY = 'portal_dedicated_dock_v1';
+export const DEDICATED_CATEGORIES_CACHE_KEY = 'portal_dedicated_categories_v1';
 
 // Backward compatibility legacy keys
 const LEGACY_CONFIG_KEY = 'smpn1_bengkalis_config_v3';
@@ -116,6 +119,9 @@ export function normalizeSchoolConfig(raw: Partial<SchoolConfig> | null | undefi
     facilities: Array.isArray(sanitizedRaw.facilities) ? sanitizedRaw.facilities : DEFAULT_SCHOOL_CONFIG.facilities,
     extracurriculars: Array.isArray(sanitizedRaw.extracurriculars) ? sanitizedRaw.extracurriculars : DEFAULT_SCHOOL_CONFIG.extracurriculars,
     agendas: Array.isArray(sanitizedRaw.agendas) ? sanitizedRaw.agendas : DEFAULT_SCHOOL_CONFIG.agendas,
+    newsCategories: Array.isArray(sanitizedRaw.newsCategories) && sanitizedRaw.newsCategories.length > 0
+      ? sanitizedRaw.newsCategories
+      : (DEFAULT_SCHOOL_CONFIG.newsCategories || ['Prestasi', 'Pengumuman', 'Kegiatan', 'Akademik', 'Ekstrakurikuler', 'Alumni']),
   };
 }
 
@@ -131,6 +137,34 @@ export function isAdminAuthenticated(): boolean {
     );
   } catch {
     return false;
+  }
+}
+
+/**
+ * Dedicated Cache: News Categories (Synchronous 0ms getter)
+ */
+export function getDedicatedCategoriesCacheSync(): string[] | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(DEDICATED_CATEGORIES_CACHE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
+  return null;
+}
+
+/**
+ * Dedicated Cache: Save News Categories
+ */
+export async function saveDedicatedCategoriesCache(categories: string[]): Promise<void> {
+  if (typeof window === 'undefined' || !Array.isArray(categories)) return;
+  try {
+    localStorage.setItem(DEDICATED_CATEGORIES_CACHE_KEY, JSON.stringify(categories));
+    await setOfflineItem('dedicated_news_categories', categories);
+  } catch (e) {
+    console.warn('Error saving dedicated categories cache:', e);
   }
 }
 
@@ -269,6 +303,10 @@ export async function getCachedSchoolConfig(forceScope?: 'public' | 'admin'): Pr
     const dedicatedDock = getDedicatedDockCacheSync();
     if (dedicatedDock) {
       resolvedConfig.mobileBottomNav = { ...resolvedConfig.mobileBottomNav, ...dedicatedDock };
+    }
+    const dedicatedCategories = getDedicatedCategoriesCacheSync();
+    if (dedicatedCategories && dedicatedCategories.length > 0) {
+      resolvedConfig.newsCategories = dedicatedCategories;
     }
     return resolvedConfig;
   }
@@ -584,6 +622,16 @@ export async function saveSchoolTabConfig(tab: string, config: SchoolConfig): Pr
         googleAppsScript: config.googleAppsScript,
       };
       break;
+    case 'posts':
+    case 'news':
+    case 'categories':
+      tabPayload = {
+        newsCategories: config.newsCategories,
+      };
+      if (config.newsCategories) {
+        saveDedicatedCategoriesCache(config.newsCategories);
+      }
+      break;
     default:
       tabPayload = config as unknown as Record<string, unknown>;
   }
@@ -605,6 +653,49 @@ export async function saveSchoolTabConfig(tab: string, config: SchoolConfig): Pr
       return true;
     }
     console.info(`Tab ${tab} tersimpan secara lokal (sinkronisasi cloud ditunda):`, msg);
+    return false;
+  }
+}
+
+/**
+ * Save and synchronize news categories directly to Firebase Firestore and local cache.
+ */
+export async function saveNewsCategories(categories: string[]): Promise<boolean> {
+  try {
+    // 1. Persist to dedicated instant cache
+    await saveDedicatedCategoriesCache(categories);
+
+    // 2. Persist to Admin and Public cached config
+    const currentConfig = (await getCachedSchoolConfig('admin')) || DEFAULT_SCHOOL_CONFIG;
+    const updatedConfig: SchoolConfig = {
+      ...currentConfig,
+      newsCategories: categories,
+    };
+    await saveLocalDraftConfig(updatedConfig);
+
+    const currentArticles = (await getCachedNewsArticles('public')) || DEFAULT_NEWS_ARTICLES;
+    await saveToPublicCache(updatedConfig, currentArticles);
+
+    // 3. Sync to Firebase Firestore cloud
+    if (db && (typeof navigator === 'undefined' || navigator.onLine)) {
+      const configDocRef = doc(db, 'school_portal', 'main_config');
+      await withTimeout(
+        setDoc(
+          configDocRef,
+          { newsCategories: categories },
+          { merge: true }
+        ),
+        4000
+      );
+    }
+    return true;
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes('resource-exhausted') || msg.includes('Quota')) {
+      console.warn('Kuota Firestore tercapai. Kategori tersimpan aman secara lokal.');
+      return true;
+    }
+    console.warn('Gagal sinkron kategori ke Firestore, tersimpan lokal:', err);
     return false;
   }
 }

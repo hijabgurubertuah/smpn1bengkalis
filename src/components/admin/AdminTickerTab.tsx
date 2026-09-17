@@ -326,22 +326,12 @@ export const AdminTickerTab: React.FC<AdminTickerTabProps> = ({ config, articles
 
                       <div>
                         <RichTextEditorWithImages
-                          label="Konten"
+                          label="Konten & Gambar Pengumuman"
                           value={ann.detailContent || ''}
                           onChange={(newVal) => updateAnn('detailContent', newVal)}
-                          placeholder="Tuliskan rincian pengumuman..."
-                          minRows={4}
+                          placeholder="Tuliskan rincian pengumuman, sisipkan gambar atau tautan langsung melalui editor..."
+                          minRows={5}
                           articles={articles.map((a) => ({ id: a.id, title: a.title, category: a.category }))}
-                        />
-                      </div>
-
-                      <div className="pt-1">
-                        <ImageUploadButton
-                          label="Gambar (Opsional)"
-                          value={ann.detailImageUrl || ''}
-                          onChange={(newUrl) => updateAnn('detailImageUrl', newUrl)}
-                          preset="post"
-                          placeholder="URL atau pilih gambar..."
                         />
                       </div>
                     </div>

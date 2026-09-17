@@ -32,6 +32,11 @@ import {
   Subscript,
   Superscript,
   Video,
+  ArrowUp,
+  ArrowDown,
+  Code,
+  MousePointer,
+  Sparkles,
 } from 'lucide-react';
 import { FormattedContentRenderer } from './FormattedContentRenderer';
 import { ImageUploadButton } from '../admin/ImageUploadButton';
@@ -1367,32 +1372,122 @@ export const RichTextEditorWithImages: React.FC<RichTextEditorWithImagesProps> =
   const handleEditorClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
     
-    // Check video block first, then image layout block to ensure strict separation of embed video link from image blocks
+    // Check video block first, then image layout block
     const videoBlock = target.closest('[data-embed-url]') as HTMLElement | null;
     const imageBlock = target.closest('[data-layout]') as HTMLElement | null;
 
     if (videoBlock) {
-      e.preventDefault();
       setSelectedEmbedNode(videoBlock);
       setSelectedEmbedType('video');
     } else if (imageBlock) {
-      e.preventDefault();
       setSelectedEmbedNode(imageBlock);
       setSelectedEmbedType('image');
     } else {
+      // If tapping on empty space inside editor
+      if (editorRef.current && (target === editorRef.current || !target.closest('p, h2, h3, blockquote, li, a'))) {
+        const lastChild = editorRef.current.lastElementChild;
+        if (!lastChild || (lastChild.tagName.toLowerCase() !== 'p' && !lastChild.textContent?.trim())) {
+          const p = document.createElement('p');
+          p.innerHTML = '<br>';
+          editorRef.current.appendChild(p);
+          handleEditorInput();
+        }
+      }
       setSelectedEmbedNode(null);
       setSelectedEmbedType(null);
+    }
+  };
+
+  const handleInsertParagraphBefore = () => {
+    if (!selectedEmbedNode || !editorRef.current) return;
+    const p = document.createElement('p');
+    p.innerHTML = '<br>';
+    selectedEmbedNode.parentNode?.insertBefore(p, selectedEmbedNode);
+    setSelectedEmbedNode(null);
+    setSelectedEmbedType(null);
+    handleEditorInput();
+
+    setTimeout(() => {
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.setStart(p, 0);
+      range.collapse(true);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+      p.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      editorRef.current?.focus();
+    }, 50);
+  };
+
+  const handleInsertParagraphAfter = () => {
+    if (!selectedEmbedNode || !editorRef.current) return;
+    const p = document.createElement('p');
+    p.innerHTML = '<br>';
+    selectedEmbedNode.parentNode?.insertBefore(p, selectedEmbedNode.nextSibling);
+    setSelectedEmbedNode(null);
+    setSelectedEmbedType(null);
+    handleEditorInput();
+
+    setTimeout(() => {
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.setStart(p, 0);
+      range.collapse(true);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+      p.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      editorRef.current?.focus();
+    }, 50);
+  };
+
+  const handleAddParagraphAtEnd = () => {
+    if (editorMode === 'wysiwyg' && editorRef.current) {
+      editorRef.current.focus();
+      const p = document.createElement('p');
+      p.innerHTML = '<br>';
+      editorRef.current.appendChild(p);
+      handleEditorInput();
+
+      setTimeout(() => {
+        const range = document.createRange();
+        const sel = window.getSelection();
+        range.setStart(p, 0);
+        range.collapse(true);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+        p.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        editorRef.current?.focus();
+      }, 50);
+    } else if (textareaRef.current) {
+      textareaRef.current.focus();
+      const val = textareaRef.current.value || '';
+      const newVal = val + (val.endsWith('\n') ? '\n' : '\n\n');
+      onChange(newVal);
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.setSelectionRange(newVal.length, newVal.length);
+        }
+      }, 50);
     }
   };
 
   const handleDeleteSelectedEmbed = () => {
     if (!selectedEmbedNode) return;
 
-    if (confirm('Apakah Anda yakin ingin menghapus media ini dari artikel?')) {
+    if (confirm('Apakah Anda yakin ingin menghapus media ini dari teks?')) {
+      const parent = selectedEmbedNode.parentNode;
       selectedEmbedNode.remove();
       setSelectedEmbedNode(null);
       setSelectedEmbedType(null);
+      
+      // Ensure at least one paragraph exists
+      if (editorRef.current && (!editorRef.current.firstElementChild || editorRef.current.children.length === 0)) {
+        const p = document.createElement('p');
+        p.innerHTML = '<br>';
+        editorRef.current.appendChild(p);
+      }
       handleEditorInput();
+      if (editorRef.current) editorRef.current.focus();
     }
   };
 
@@ -1447,13 +1542,71 @@ export const RichTextEditorWithImages: React.FC<RichTextEditorWithImagesProps> =
 
   return (
     <div className="space-y-2">
-      {/* Top Header Label */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+      {/* Top Header Label & Controls */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
         {label && (
           <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
             {label}
           </label>
         )}
+
+        <div className="flex items-center gap-1.5 ml-auto">
+          {/* Quick Add Paragraph */}
+          <button
+            type="button"
+            onClick={handleAddParagraphAtEnd}
+            className="px-2 py-1 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-700 text-xs font-semibold rounded-lg border border-slate-200 transition-colors flex items-center gap-1 cursor-pointer shadow-2xs"
+            title="Tambah paragraf baru di bagian bawah"
+          >
+            <Plus className="w-3.5 h-3.5 text-blue-600" />
+            <span className="hidden sm:inline">Tambah Paragraf</span>
+            <span className="sm:hidden">+ Paragraf</span>
+          </button>
+
+          {/* Mode Switcher Toggle */}
+          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs">
+            <button
+              type="button"
+              onClick={() => {
+                if (editorMode !== 'wysiwyg') {
+                  setEditorMode('wysiwyg');
+                }
+              }}
+              className={`px-2.5 py-1 rounded-md font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                editorMode === 'wysiwyg'
+                  ? 'bg-white text-blue-600 shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="Mode Visual / WYSIWYG"
+            >
+              <Sparkles className="w-3 h-3" />
+              <span>Visual</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (editorMode !== 'code') {
+                  // Sync HTML to value
+                  if (editorRef.current) {
+                    let currentHtml = editorRef.current.innerHTML;
+                    currentHtml = currentHtml.replace(/<p[^>]*>\s*(<br\s*\/?>|&nbsp;|\s*)*<\/p>/gi, '');
+                    onChange(currentHtml);
+                  }
+                  setEditorMode('code');
+                }
+              }}
+              className={`px-2.5 py-1 rounded-md font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                editorMode === 'code'
+                  ? 'bg-white text-blue-600 shadow-2xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="Mode Kode / Teks HTML (Ketik langsung)"
+            >
+              <Code className="w-3 h-3" />
+              <span>Kode / Teks</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Unified Editor & Preview Panel */}
@@ -2330,12 +2483,16 @@ export const RichTextEditorWithImages: React.FC<RichTextEditorWithImagesProps> =
                 saveSelection();
                 updateActiveFormats();
               }}
+              onTouchEnd={() => {
+                saveSelection();
+                updateActiveFormats();
+              }}
               onClick={(e) => {
                 saveSelection();
                 updateActiveFormats();
                 handleEditorClick(e);
               }}
-              className="w-full p-4 min-h-[220px] text-sm font-sans text-slate-800 leading-relaxed focus:outline-none bg-white font-normal [&_p]:my-2 [&_h2]:text-xl [&_h2]:font-extrabold [&_h2]:text-slate-900 [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-slate-900 [&_h3]:mt-3 [&_h3]:mb-1 [&_blockquote]:border-l-4 [&_blockquote]:border-blue-600 [&_blockquote]:pl-4 [&_blockquote]:py-2 [&_blockquote]:my-3 [&_blockquote]:italic [&_blockquote]:bg-blue-50/60 [&_blockquote]:rounded-r-xl [&_blockquote]:text-slate-700 [&_a]:text-blue-600 [&_a]:underline [&_a:hover]:text-blue-800 [&_a]:font-medium [&_u]:decoration-current [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:pl-6 [&_ol]:my-2 [&_li]:my-0.5 [&_iframe]:pointer-events-none"
+              className="w-full p-4 min-h-[220px] text-sm font-sans text-slate-800 leading-relaxed focus:outline-none bg-white font-normal [&_p]:my-2.5 [&_h2]:text-xl [&_h2]:font-extrabold [&_h2]:text-slate-900 [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-slate-900 [&_h3]:mt-3 [&_h3]:mb-1 [&_blockquote]:border-l-4 [&_blockquote]:border-blue-600 [&_blockquote]:pl-4 [&_blockquote]:py-2 [&_blockquote]:my-3 [&_blockquote]:italic [&_blockquote]:bg-blue-50/60 [&_blockquote]:rounded-r-xl [&_blockquote]:text-slate-700 [&_a]:text-blue-600 [&_a]:underline [&_a:hover]:text-blue-800 [&_a]:font-medium [&_u]:decoration-current [&_ul]:pl-6 [&_ul]:my-2 [&_ol]:pl-6 [&_ol]:my-2 [&_li]:my-0.5 [&_iframe]:pointer-events-none cursor-text [&_[data-layout]]:cursor-pointer [&_[data-layout]]:my-3 [&_[data-layout]]:transition-all hover:[&_[data-layout]]:ring-2 hover:[&_[data-layout]]:ring-blue-400/50"
               style={{ minHeight: `${minRows * 24}px` }}
             />
           ) : (
@@ -2351,42 +2508,93 @@ export const RichTextEditorWithImages: React.FC<RichTextEditorWithImagesProps> =
 
           {/* Floating Action Overlay for Selected Image or Video Embed */}
           {selectedEmbedNode && (
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white rounded-xl px-4 py-2.5 flex items-center gap-3.5 shadow-2xl border border-slate-700/80 animate-in fade-in slide-in-from-bottom-2 duration-200">
-              <span className="text-xs font-bold text-slate-300 select-none flex items-center gap-1.5">
-                {selectedEmbedType === 'video' ? '📺 Video Terpilih' : '🖼️ Gambar Terpilih'}
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white rounded-xl px-3.5 py-2.5 flex flex-wrap items-center justify-center gap-2 shadow-2xl border border-slate-700/80 animate-in fade-in slide-in-from-bottom-2 duration-200 max-w-[94%] sm:max-w-max">
+              <span className="text-xs font-bold text-slate-300 select-none flex items-center gap-1 shrink-0">
+                {selectedEmbedType === 'video' ? '📺 Video' : '🖼️ Gambar'}
               </span>
-              <div className="h-4 w-[1px] bg-slate-700" />
+              
+              <div className="h-4 w-[1px] bg-slate-700 hidden sm:block shrink-0" />
+
+              {/* Add Paragraph Above Button */}
+              <button
+                type="button"
+                onClick={handleInsertParagraphBefore}
+                className="text-xs font-bold text-emerald-400 hover:text-emerald-300 active:scale-95 transition-all cursor-pointer flex items-center gap-1 bg-emerald-950/60 hover:bg-emerald-900/80 px-2 py-1 rounded-lg border border-emerald-700/50 shrink-0"
+                title="Sisipkan paragraf kosong di atas gambar ini untuk menulis teks"
+              >
+                <ArrowUp className="w-3.5 h-3.5" />
+                <span>+ Teks di Atas</span>
+              </button>
+
+              {/* Add Paragraph Below Button */}
+              <button
+                type="button"
+                onClick={handleInsertParagraphAfter}
+                className="text-xs font-bold text-emerald-400 hover:text-emerald-300 active:scale-95 transition-all cursor-pointer flex items-center gap-1 bg-emerald-950/60 hover:bg-emerald-900/80 px-2 py-1 rounded-lg border border-emerald-700/50 shrink-0"
+                title="Sisipkan paragraf kosong di bawah gambar ini untuk menulis teks"
+              >
+                <ArrowDown className="w-3.5 h-3.5" />
+                <span>+ Teks di Bawah</span>
+              </button>
+
+              {/* Edit Embed Button */}
               <button
                 type="button"
                 onClick={handleEditSelectedEmbed}
-                className="text-xs font-bold text-blue-400 hover:text-blue-300 active:scale-95 transition-all cursor-pointer flex items-center gap-1"
-                title="Ubah detail / layout media ini"
+                className="text-xs font-bold text-blue-400 hover:text-blue-300 active:scale-95 transition-all cursor-pointer flex items-center gap-1 bg-blue-950/60 hover:bg-blue-900/80 px-2 py-1 rounded-lg border border-blue-700/50 shrink-0"
+                title="Ubah detail / layout / ganti foto media ini"
               >
                 <Edit className="w-3.5 h-3.5" />
-                <span>Ubah / Edit</span>
+                <span>Ganti Foto</span>
               </button>
+
+              {/* Delete Embed Button */}
               <button
                 type="button"
                 onClick={handleDeleteSelectedEmbed}
-                className="text-xs font-bold text-red-400 hover:text-red-300 active:scale-95 transition-all cursor-pointer flex items-center gap-1"
+                className="text-xs font-bold text-red-400 hover:text-red-300 active:scale-95 transition-all cursor-pointer flex items-center gap-1 bg-red-950/60 hover:bg-red-900/80 px-2 py-1 rounded-lg border border-red-700/50 shrink-0"
                 title="Hapus media ini"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Hapus</span>
               </button>
+
+              {/* Close Overlay Button */}
               <button
                 type="button"
                 onClick={() => {
                   setSelectedEmbedNode(null);
                   setSelectedEmbedType(null);
                 }}
-                className="text-slate-400 hover:text-white transition-colors cursor-pointer ml-1"
+                className="text-slate-400 hover:text-white transition-colors cursor-pointer p-1 rounded hover:bg-slate-800 shrink-0"
                 title="Batal Pilih"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
           )}
+
+          {/* Bottom Editor Helper Bar */}
+          <div className="bg-slate-50/90 border-t border-slate-200 px-3 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1 font-medium text-slate-600">
+                <MousePointer className="w-3 h-3 text-blue-600" />
+                <span className="hidden sm:inline">Ketuk gambar untuk memunculkan tombol edit / sisip teks.</span>
+                <span className="sm:hidden">Ketuk gambar untuk opsi teks/ganti foto.</span>
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleAddParagraphAtEnd}
+                className="font-bold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <Plus className="w-3 h-3" />
+                <span>+ Paragraf di Bawah</span>
+              </button>
+            </div>
+          </div>
 
         </div>
 
