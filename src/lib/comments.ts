@@ -984,37 +984,51 @@ export function getArticleLikesState(
   return { likes: initialLikes, hasLiked: false };
 }
 
-const ARTICLE_VIEWS_KEY = 'smpn1_article_views_v1';
+const VIEWED_ARTICLES_SESSION_KEY = 'smpn1_viewed_articles_v1';
+
+function getSessionViewedArticles(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = sessionStorage.getItem(VIEWED_ARTICLES_SESSION_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function markArticleAsViewedInSession(articleId: string) {
+  if (typeof window === 'undefined') return;
+  try {
+    const current = getSessionViewedArticles();
+    if (!current.includes(articleId)) {
+      current.push(articleId);
+      sessionStorage.setItem(VIEWED_ARTICLES_SESSION_KEY, JSON.stringify(current));
+    }
+  } catch {
+    // ignore
+  }
+}
 
 /**
- * Increment and record article view count persistently in localStorage & Firestore
+ * Increment and record article view count persistently in Firestore once per browser session
  */
 export async function incrementArticleViews(
   articleId: string,
   initialViews = 0
 ): Promise<number> {
-  let storedViews: Record<string, number> = {};
+  const viewedList = getSessionViewedArticles();
+  const hasViewedInSession = viewedList.includes(articleId);
 
-  if (typeof window !== 'undefined') {
-    try {
-      const raw = localStorage.getItem(ARTICLE_VIEWS_KEY);
-      if (raw) storedViews = JSON.parse(raw);
-    } catch {
-      // ignore
-    }
+  if (hasViewedInSession) {
+    // Already counted in this session, don't increment Firestore again.
+    // Just return the initial views (cloud is source of truth).
+    return initialViews;
   }
 
-  const currentCount = storedViews[articleId] !== undefined ? storedViews[articleId] : initialViews;
-  const newCount = currentCount + 1;
-  storedViews[articleId] = newCount;
+  // Mark as viewed in session
+  markArticleAsViewedInSession(articleId);
 
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.setItem(ARTICLE_VIEWS_KEY, JSON.stringify(storedViews));
-    } catch {
-      // ignore
-    }
-  }
+  const newCount = initialViews + 1;
 
   // Update in Firestore
   if (db) {
@@ -1026,8 +1040,8 @@ export async function incrementArticleViews(
         }),
         3000
       );
-    } catch {
-      // ignore
+    } catch (err) {
+      console.warn('Failed to increment views in Firestore:', err);
     }
   }
 
@@ -1041,18 +1055,7 @@ export function getArticleViewsCount(
   articleId: string,
   initialViews = 0
 ): number {
-  if (typeof window === 'undefined') return initialViews;
-  try {
-    const raw = localStorage.getItem(ARTICLE_VIEWS_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed[articleId] !== undefined) {
-        return Math.max(initialViews, parsed[articleId]);
-      }
-    }
-  } catch {
-    // ignore
-  }
+  // Cloud Firestore is the absolute source of truth!
   return initialViews;
 }
 
