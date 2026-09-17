@@ -905,10 +905,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <AdminPostsTab
               articles={articles}
               categories={config.newsCategories}
+              config={config}
               onSaveArticle={onSaveArticle}
               onSaveArticleLocally={onSaveArticleLocally}
               onDeleteArticle={onDeleteArticle}
               onUpdateCategories={(newCats) => handleConfigUpdate({ ...config, newsCategories: newCats })}
+              onSaveCategoriesToFirebase={async (newCats) => {
+                const updatedConfig = { ...config, newsCategories: newCats };
+                handleConfigUpdate(updatedConfig);
+                const success = await saveSchoolTabConfig('posts', updatedConfig);
+                if (success) {
+                  setUnsavedTabs((prev) => ({ ...prev, posts: false }));
+                }
+                return success;
+              }}
             />
           </div>
 

@@ -116,6 +116,9 @@ export function normalizeSchoolConfig(raw: Partial<SchoolConfig> | null | undefi
     facilities: Array.isArray(sanitizedRaw.facilities) ? sanitizedRaw.facilities : DEFAULT_SCHOOL_CONFIG.facilities,
     extracurriculars: Array.isArray(sanitizedRaw.extracurriculars) ? sanitizedRaw.extracurriculars : DEFAULT_SCHOOL_CONFIG.extracurriculars,
     agendas: Array.isArray(sanitizedRaw.agendas) ? sanitizedRaw.agendas : DEFAULT_SCHOOL_CONFIG.agendas,
+    newsCategories: Array.isArray(sanitizedRaw.newsCategories) && sanitizedRaw.newsCategories.length > 0
+      ? sanitizedRaw.newsCategories
+      : DEFAULT_SCHOOL_CONFIG.newsCategories,
   };
 }
 
@@ -582,6 +585,11 @@ export async function saveSchoolTabConfig(tab: string, config: SchoolConfig): Pr
     case 'appscript':
       tabPayload = {
         googleAppsScript: config.googleAppsScript,
+      };
+      break;
+    case 'posts':
+      tabPayload = {
+        newsCategories: config.newsCategories,
       };
       break;
     default:

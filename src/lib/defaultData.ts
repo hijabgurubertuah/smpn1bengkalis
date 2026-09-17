@@ -116,6 +116,7 @@ export const DEFAULT_SCHOOL_CONFIG: SchoolConfig = {
     copyright: '',
   },
   themeConfig: DEFAULT_THEME_CONFIG,
+  newsCategories: ['Prestasi', 'Pengumuman', 'Kegiatan', 'Akademik', 'Ekstrakurikuler', 'Alumni'],
   googleAppsScript: {
     enabled: true,
     webAppUrl: DEFAULT_APPS_SCRIPT_WEB_APP_URL || '',

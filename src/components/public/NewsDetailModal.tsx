@@ -117,20 +117,35 @@ const SingleNewsModalView: React.FC<SingleNewsModalViewProps> = ({
       url.searchParams.set('post', article.id);
       const shareUrl = url.toString();
 
-      // Formatted text for WhatsApp and Clipboard
-      const shareMessage = `*${article.title}*\n\nBaca berita lengkapnya di:\n${shareUrl}`;
+      // Formatted text for social sharing
+      const shareText = `*${article.title}*\n\n${article.summary ? article.summary + '\n\n' : ''}Baca selengkapnya di:\n${shareUrl}`;
 
-      // 1. Copy to clipboard automatically
+      // Try native Web Share API first if supported
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: article.title,
+            text: article.summary || article.title,
+            url: shareUrl,
+          });
+          setCopiedNotice(true);
+          setTimeout(() => setCopiedNotice(false), 3000);
+          return;
+        } catch (shareErr) {
+          if ((shareErr as Error)?.name === 'AbortError') return;
+        }
+      }
+
+      // Fallback: Copy to clipboard and open WhatsApp
       if (navigator.clipboard) {
         try {
-          await navigator.clipboard.writeText(shareMessage);
+          await navigator.clipboard.writeText(shareText);
           setCopiedNotice(true);
           setTimeout(() => setCopiedNotice(false), 3500);
         } catch {}
       }
 
-      // 2. Open WhatsApp with pre-filled message
-      const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
+      const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
       window.open(waUrl, '_blank');
     } catch (e) {
       if (navigator.clipboard) {
@@ -141,7 +156,7 @@ const SingleNewsModalView: React.FC<SingleNewsModalViewProps> = ({
     }
   };
 
-  // Sync active article ID to URL and update Open Graph meta tags (cover image & title)
+  // Sync active article ID to URL and update Open Graph meta tags (cover image, title, & description)
   React.useEffect(() => {
     if (!article?.id) return;
 
@@ -152,8 +167,9 @@ const SingleNewsModalView: React.FC<SingleNewsModalViewProps> = ({
       window.history.replaceState({}, '', url.toString());
     } catch {}
 
-    // 2. Dynamic OpenGraph / Title / Image meta tags
+    // 2. Dynamic OpenGraph / Title / Image / Description meta tags
     const originalTitle = document.title;
+    const currentShareUrl = `${window.location.origin}${window.location.pathname}?post=${article.id}`;
     document.title = `${article.title} - SMP Negeri 1 Bengkalis`;
 
     const setMetaTag = (selector: string, attr: string, value: string) => {
@@ -169,6 +185,8 @@ const SingleNewsModalView: React.FC<SingleNewsModalViewProps> = ({
       tag.setAttribute(attr, value);
     };
 
+    const cleanSummary = article.summary || article.content?.replace(/<[^>]+>/g, '').slice(0, 150) || article.title;
+
     if (article.coverImage) {
       setMetaTag('meta[property="og:image"]', 'content', article.coverImage);
       setMetaTag('meta[name="twitter:image"]', 'content', article.coverImage);
@@ -183,6 +201,10 @@ const SingleNewsModalView: React.FC<SingleNewsModalViewProps> = ({
 
     setMetaTag('meta[property="og:title"]', 'content', article.title);
     setMetaTag('meta[name="twitter:title"]', 'content', article.title);
+    setMetaTag('meta[property="og:description"]', 'content', cleanSummary);
+    setMetaTag('meta[name="twitter:description"]', 'content', cleanSummary);
+    setMetaTag('meta[name="description"]', 'content', cleanSummary);
+    setMetaTag('meta[property="og:url"]', 'content', currentShareUrl);
 
     return () => {
       document.title = originalTitle;

@@ -15,7 +15,8 @@
         "facilities": { "type": "array", "description": "Daftar fasilitas sekolah" },
         "extracurriculars": { "type": "array", "description": "Daftar ekstrakurikuler sekolah" },
         "agendas": { "type": "array", "description": "Daftar agenda kegiatan terdekat" },
-        "footer": { "type": "object", "description": "Informasi footer, alamat, kontak, dan media sosial" }
+        "footer": { "type": "object", "description": "Informasi footer, alamat, kontak, dan media sosial" },
+        "newsCategories": { "type": "array", "description": "Daftar kategori berita yang dikelola oleh admin" }
       },
       "required": ["identity", "header", "navMenus", "layoutSections", "principal", "embeds", "footer"]
     },
