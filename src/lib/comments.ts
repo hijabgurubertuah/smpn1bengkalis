@@ -855,15 +855,48 @@ export async function toggleLikeComment(
 
 /**
  * Like / Unlike a News Article Post (Tanda Love pada Postingan)
- * Guaranteed 1 like per browser without requiring login
+ * Guaranteed 1 like per browser without requiring login, preventing resets for other users
  */
 export async function toggleLikeArticle(
   articleId: string,
+  likedByEmailsOrUserIdentifier?: string[] | string,
   userIdentifier?: string
 ): Promise<{ likes: number; hasLiked: boolean }> {
-  const browserId = userIdentifier || getBrowserDeviceId();
-  let storedLikes: Record<string, { count: number; likedUsers: string[] }> = {};
+  let currentLikedByEmails: string[] = [];
+  let browserId = '';
 
+  if (Array.isArray(likedByEmailsOrUserIdentifier)) {
+    currentLikedByEmails = likedByEmailsOrUserIdentifier;
+    browserId = userIdentifier || getBrowserDeviceId();
+  } else {
+    browserId = likedByEmailsOrUserIdentifier || getBrowserDeviceId();
+    // Try to get current from localStorage fallback
+    try {
+      const raw = localStorage.getItem(ARTICLE_LIKES_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed[articleId]) {
+          currentLikedByEmails = parsed[articleId].likedUsers || [];
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const hasLiked = currentLikedByEmails.includes(browserId);
+  let newUsers = [...currentLikedByEmails];
+
+  if (hasLiked) {
+    newUsers = newUsers.filter((u) => u !== browserId);
+  } else {
+    if (!newUsers.includes(browserId)) {
+      newUsers.push(browserId);
+    }
+  }
+  const newCount = newUsers.length;
+
+  let storedLikes: Record<string, { count: number; likedUsers: string[] }> = {};
   if (typeof window !== 'undefined') {
     try {
       const raw = localStorage.getItem(ARTICLE_LIKES_KEY);
@@ -872,21 +905,6 @@ export async function toggleLikeArticle(
       // ignore
     }
   }
-
-  const current = storedLikes[articleId] || { count: 0, likedUsers: [] };
-  const hasLiked = current.likedUsers.includes(browserId);
-
-  let newCount = current.count;
-  let newUsers = current.likedUsers;
-
-  if (hasLiked) {
-    newUsers = newUsers.filter((u) => u !== browserId);
-    newCount = Math.max(0, newCount - 1);
-  } else {
-    newUsers = [...newUsers, browserId];
-    newCount = newCount + 1;
-  }
-
   storedLikes[articleId] = { count: newCount, likedUsers: newUsers };
 
   if (typeof window !== 'undefined') {
@@ -923,28 +941,44 @@ export async function toggleLikeArticle(
 export function getArticleLikesState(
   articleId: string,
   initialLikes = 0,
+  likedByEmailsOrUserIdentifier?: string[] | string,
   userIdentifier?: string
 ): { likes: number; hasLiked: boolean } {
-  const browserId = userIdentifier || getBrowserDeviceId();
-  if (typeof window === 'undefined') {
-    return { likes: initialLikes, hasLiked: false };
+  let likedByEmails: string[] = [];
+  let browserId = '';
+
+  if (Array.isArray(likedByEmailsOrUserIdentifier)) {
+    likedByEmails = likedByEmailsOrUserIdentifier;
+    browserId = userIdentifier || getBrowserDeviceId();
+  } else {
+    browserId = likedByEmailsOrUserIdentifier || getBrowserDeviceId();
   }
 
-  try {
-    const raw = localStorage.getItem(ARTICLE_LIKES_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed[articleId]) {
-        const item = parsed[articleId];
-        const hasLiked = browserId ? item.likedUsers?.includes(browserId) : false;
-        return {
-          likes: Math.max(initialLikes, item.count || 0),
-          hasLiked: Boolean(hasLiked),
-        };
+  const hasLikedInCloud = likedByEmails.includes(browserId);
+  if (hasLikedInCloud) {
+    return {
+      likes: Math.max(initialLikes, likedByEmails.length),
+      hasLiked: true,
+    };
+  }
+
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(ARTICLE_LIKES_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed[articleId]) {
+          const item = parsed[articleId];
+          const hasLikedLocal = browserId ? item.likedUsers?.includes(browserId) : false;
+          return {
+            likes: Math.max(initialLikes, item.count || 0),
+            hasLiked: Boolean(hasLikedLocal),
+          };
+        }
       }
+    } catch {
+      // ignore
     }
-  } catch {
-    // ignore
   }
 
   return { likes: initialLikes, hasLiked: false };

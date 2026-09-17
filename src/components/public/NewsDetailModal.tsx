@@ -66,7 +66,7 @@ const SingleNewsModalView: React.FC<SingleNewsModalViewProps> = ({
   const [copiedNotice, setCopiedNotice] = useState(false);
   const [actionConfirmUrl, setActionConfirmUrl] = useState<string | null>(null);
   const [likesState, setLikesState] = useState(() =>
-    getArticleLikesState(article.id, article.likes || 0, getBrowserDeviceId())
+    getArticleLikesState(article.id, article.likes || 0, article.likedByEmails || [], getBrowserDeviceId())
   );
   const [viewsCount, setViewsCount] = useState(() =>
     getArticleViewsCount(article.id, article.views || 0)
@@ -75,10 +75,10 @@ const SingleNewsModalView: React.FC<SingleNewsModalViewProps> = ({
   const viewIncrementedRef = useRef(false);
 
   useEffect(() => {
-    setLikesState(getArticleLikesState(article.id, article.likes || 0, getBrowserDeviceId()));
+    setLikesState(getArticleLikesState(article.id, article.likes || 0, article.likedByEmails || [], getBrowserDeviceId()));
     setViewsCount(getArticleViewsCount(article.id, article.views || 0));
     viewIncrementedRef.current = false;
-  }, [article.id, article.likes, article.views]);
+  }, [article.id, article.likes, article.views, article.likedByEmails]);
 
   useEffect(() => {
     if (viewIncrementedRef.current) return;
@@ -104,7 +104,7 @@ const SingleNewsModalView: React.FC<SingleNewsModalViewProps> = ({
       hasLiked: !prev.hasLiked,
     }));
 
-    toggleLikeArticle(article.id, userIdentifier).catch((err) => {
+    toggleLikeArticle(article.id, article.likedByEmails || [], userIdentifier).catch((err) => {
       console.warn('Failed to sync post like:', err);
     });
   };
