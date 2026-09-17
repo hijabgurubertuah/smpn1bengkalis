@@ -20,6 +20,7 @@ import {
   Users,
   Target,
   Search,
+  Settings,
 } from 'lucide-react';
 import { ImageUploadButton } from './ImageUploadButton';
 import { AutoResizeTextarea } from '../common/AutoResizeTextarea';
@@ -302,6 +303,90 @@ export const AdminFacilitiesEkskulTab: React.FC<AdminFacilitiesEkskulTabProps> =
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Settings Panel for Titles and Subtitles */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowTitleSettings(!showTitleSettings)}
+          className="w-full px-6 py-4 bg-slate-50 flex items-center justify-between text-left border-b border-slate-200 hover:bg-slate-100/80 transition-all cursor-pointer"
+        >
+          <div className="flex items-center gap-2">
+            <Settings className="w-5 h-5 text-blue-600" />
+            <div>
+              <h4 className="font-bold text-slate-800 text-sm">
+                Edit Judul Seksi &amp; Label Tab
+              </h4>
+              <p className="text-xs text-slate-500">
+                Sesuaikan teks judul utama, penjelasan sub-judul, dan label tab pada halaman depan portal.
+              </p>
+            </div>
+          </div>
+          <span className="text-xs text-blue-600 font-bold hover:underline">
+            {showTitleSettings ? 'Sembunyikan' : 'Buka Pengaturan'}
+          </span>
+        </button>
+
+        {showTitleSettings && (
+          <div className="p-6 space-y-4 bg-white divide-y divide-slate-100">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  Judul Utama Seksi
+                </label>
+                <input
+                  type="text"
+                  value={config.facilitiesSectionTitle || ''}
+                  onChange={(e) => handleUpdateTitles('facilitiesSectionTitle', e.target.value)}
+                  placeholder="Fasilitas Modern &amp; Ekstrakurikuler"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  Label Tab Fasilitas
+                </label>
+                <input
+                  type="text"
+                  value={config.facilitiesTabTitle || ''}
+                  onChange={(e) => handleUpdateTitles('facilitiesTabTitle', e.target.value)}
+                  placeholder="Fasilitas Sekolah"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  Sub-Judul / Penjelasan Seksi
+                </label>
+                <textarea
+                  rows={2}
+                  value={config.facilitiesSectionSubtitle || ''}
+                  onChange={(e) => handleUpdateTitles('facilitiesSectionSubtitle', e.target.value)}
+                  placeholder="Dukungan penuh sarana fisik berstandar tinggi..."
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                  Label Tab Ekstrakurikuler
+                </label>
+                <input
+                  type="text"
+                  value={config.ekskulTabTitle || ''}
+                  onChange={(e) => handleUpdateTitles('ekskulTabTitle', e.target.value)}
+                  placeholder="Ekstrakurikuler"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
 
