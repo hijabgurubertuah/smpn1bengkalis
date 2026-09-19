@@ -948,20 +948,20 @@ export const DriveMediaGalleryModal: React.FC<DriveMediaGalleryModalProps> = ({
               Batal
             </button>
 
-            {/* Tombol Unggah ke Drive */}
+            {/* Tombol Unggah */}
             <button
               type="button"
               onClick={() => modalFileInputRef.current?.click()}
               disabled={isUploading}
               className="px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer disabled:opacity-50"
-              title="Unggah ke Drive"
+              title="Unggah Gambar"
             >
               {isUploading ? (
                 <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-600" />
               ) : (
                 <CloudUpload className="w-3.5 h-3.5 text-blue-600" />
               )}
-              <span>Unggah ke Drive</span>
+              <span>Unggah</span>
             </button>
 
             {/* Tombol Gunakan Gambar */}

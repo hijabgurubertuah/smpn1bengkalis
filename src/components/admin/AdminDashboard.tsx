@@ -227,7 +227,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     { id: 'theme', label: 'Warna & Tema Website', icon: <Palette className="w-4 h-4" /> },
     { id: 'ticker', label: 'Teks Berjalan (Ticker)', icon: <Volume2 className="w-4 h-4" /> },
     { id: 'layout', label: 'Tata Letak', icon: <Layout className="w-4 h-4" /> },
-    { id: 'appscript', label: 'Google Drive & Sheets', icon: <FileSpreadsheet className="w-4 h-4" /> },
+    { id: 'appscript', label: 'Media & Spreadsheet', icon: <FileSpreadsheet className="w-4 h-4" /> },
     { id: 'sync', label: 'Firebase & Backup', icon: <Database className="w-4 h-4 text-blue-400" /> },
   ];
 

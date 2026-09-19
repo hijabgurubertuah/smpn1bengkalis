@@ -229,7 +229,7 @@ export function scanAppForDriveImages(): DriveMediaItem[] {
         const cdnUrl = `https://lh3.googleusercontent.com/d/${fileId}`;
         foundItems.push({
           fileId,
-          fileName: suggestedName || `Asset_Drive_${fileId.slice(0, 8)}.jpg`,
+          fileName: suggestedName || `Asset_${fileId.slice(0, 8)}.jpg`,
           fileUrl: cdnUrl,
           viewUrl: `https://drive.google.com/file/d/${fileId}/view`,
           uploadedAt: new Date().toISOString(),

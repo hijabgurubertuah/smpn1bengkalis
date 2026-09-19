@@ -60,7 +60,7 @@ export const MultiImageUploader: React.FC<MultiImageUploaderProps> = ({
     const currentConfig = getStoredAppsScriptConfig();
     if (!currentConfig || !currentConfig.webAppUrl) {
       setUploaderNotice(
-        'Google Apps Script belum dikonfigurasi. Silakan buka tab "Google Drive & Sheets" di Admin untuk setup, atau tempel tautan gambar manual di tombol "Link".'
+        'Google Apps Script belum dikonfigurasi. Silakan buka tab "Media & Spreadsheet" di Admin untuk setup, atau tempel tautan gambar manual di tombol "Link".'
       );
       setShowUrlInput(true);
       return;
@@ -73,7 +73,7 @@ export const MultiImageUploader: React.FC<MultiImageUploaderProps> = ({
 
     for (let i = 0; i < filesToProcess.length; i++) {
       const file = filesToProcess[i];
-      setProgressText(`Mengunggah ke Drive via Apps Script (${i + 1}/${filesToProcess.length}): ${file.name}...`);
+      setProgressText(`Mengunggah (${i + 1}/${filesToProcess.length}): ${file.name}...`);
       try {
         const uploadResult = await uploadFileViaAppsScript(file, {
           webAppUrl: currentConfig.webAppUrl,
@@ -83,7 +83,7 @@ export const MultiImageUploader: React.FC<MultiImageUploaderProps> = ({
         newImageUrls.push(uploadResult.fileUrl);
       } catch (err: unknown) {
         const errorMsg = err instanceof Error ? err.message : String(err);
-        console.error('Failed to upload image to Drive via Apps Script:', err);
+        console.error('Failed to upload image via Apps Script:', err);
         setUploaderNotice(`Gagal mengunggah ${file.name}: ${errorMsg}`);
       }
     }
@@ -134,10 +134,10 @@ export const MultiImageUploader: React.FC<MultiImageUploaderProps> = ({
             type="button"
             onClick={() => setIsGalleryModalOpen(true)}
             className="text-[11px] text-blue-700 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 font-semibold flex items-center gap-1 cursor-pointer px-2.5 py-1 rounded-md border border-blue-200 transition-colors"
-            title="Pilih gambar yang pernah diunggah dari Google Drive"
+            title="Pilih gambar yang pernah diunggah dari galeri"
           >
             <FolderHeart className="w-3 h-3 text-blue-600" />
-            <span>Galeri Drive</span>
+            <span>Galeri</span>
           </button>
           <button
             type="button"
@@ -172,7 +172,7 @@ export const MultiImageUploader: React.FC<MultiImageUploaderProps> = ({
                 handleAddUrl();
               }
             }}
-            placeholder="Tempel tautan gambar atau Google Drive..."
+            placeholder="Tempel tautan gambar..."
             className="flex-1 px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-600 focus:outline-none"
           />
           <button
@@ -242,7 +242,7 @@ export const MultiImageUploader: React.FC<MultiImageUploaderProps> = ({
           <div className="flex items-center gap-2 text-xs text-slate-700">
             <Upload className="w-4 h-4 text-blue-600" />
             <span className="font-bold">Pilih Banyak Foto Sekaligus</span>
-            <span className="text-slate-400 text-[11px]">(Langsung ke Drive via Apps Script)</span>
+            <span className="text-slate-400 text-[11px]">(Unggah via Apps Script)</span>
           </div>
         )}
       </div>
@@ -275,7 +275,7 @@ export const MultiImageUploader: React.FC<MultiImageUploaderProps> = ({
         </div>
       )}
 
-      {/* Drive Media Gallery Modal */}
+      {/* Media Gallery Modal */}
       <DriveMediaGalleryModal
         isOpen={isGalleryModalOpen}
         onClose={() => setIsGalleryModalOpen(false)}
@@ -292,7 +292,7 @@ export const MultiImageUploader: React.FC<MultiImageUploaderProps> = ({
           onChange([...images, ...urls]);
           setIsGalleryModalOpen(false);
         }}
-        title="Pilih Gambar dari Google Drive"
+        title="Pilih Gambar dari Galeri"
       />
     </div>
   );

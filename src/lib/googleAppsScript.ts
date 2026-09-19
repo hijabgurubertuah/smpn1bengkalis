@@ -373,7 +373,7 @@ export async function uploadFileViaAppsScript(
 
   if (!webAppUrl || !webAppUrl.trim()) {
     throw new Error(
-      'URL Google Apps Script belum dikonfigurasi. Buka tab "Google Drive & Sheets" di Admin untuk memasukkan URL Web App Anda.'
+      'URL Google Apps Script belum dikonfigurasi. Buka tab "Media & Spreadsheet" di Admin untuk memasukkan URL Web App Anda.'
     );
   }
 
@@ -396,7 +396,7 @@ export async function uploadFileViaAppsScript(
     spreadsheetId: (options?.spreadsheetId ?? storedConfig?.spreadsheetId ?? '').trim(),
   };
 
-  options?.onProgress?.('Mengunggah ke Google Drive via Apps Script...');
+  options?.onProgress?.('Mengunggah gambar via Apps Script...');
 
   // Use text/plain;charset=utf-8 to avoid browser CORS preflight OPTIONS request
   const response = await fetch(cleanUrl, {
@@ -474,7 +474,7 @@ export async function listDriveFilesViaAppsScript(options?: {
     return data.files.map((f: any) => ({
       status: 'success' as const,
       fileId: f.fileId || '',
-      fileName: f.fileName || 'Foto Google Drive',
+      fileName: f.fileName || 'Foto Galeri',
       fileUrl: f.fileUrl || `https://lh3.googleusercontent.com/d/${f.fileId}`,
       viewUrl: f.viewUrl || (f.fileId ? `https://drive.google.com/file/d/${f.fileId}/view` : ''),
       size: typeof f.size === 'number' ? f.size : 0,

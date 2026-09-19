@@ -78,7 +78,7 @@ export function parseEmbedUrl(input?: string): ParsedEmbed | null {
         originalUrl: raw,
         embedUrl: `https://drive.google.com/file/d/${driveMatch[1]}/preview`,
         kind: 'google-drive',
-        label: 'Dokumen Google Drive',
+        label: 'Dokumen Lampiran',
         canOpenInNewTab: true,
       };
     }

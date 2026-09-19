@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { NewsArticle } from '../../types';
 import {
-  BookmarkCheck,
+  Pin,
   Newspaper,
   Search,
   Image as ImageIcon,
@@ -334,7 +334,7 @@ export const NewsSection: React.FC<NewsSectionProps> = ({
                             : 'text-[10px] sm:text-[11px] px-2 py-0.5 sm:px-2.5 sm:py-1'
                         }`}
                       >
-                        <BookmarkCheck className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-slate-950" />
+                        <Pin className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-slate-950 text-slate-950" />
                         <span className={layoutColumns === 3 || layoutColumns === 4 ? 'hidden sm:inline' : 'inline'}>Unggulan</span>
                       </span>
                     )}

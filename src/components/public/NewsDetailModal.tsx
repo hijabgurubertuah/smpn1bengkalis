@@ -6,7 +6,7 @@ import {
   User,
   Eye,
   Tag,
-  BookmarkCheck,
+  Pin,
   Share2,
   ExternalLink,
   Maximize2,
@@ -267,7 +267,7 @@ const SingleNewsModalView: React.FC<SingleNewsModalViewProps> = ({
             )}
             {article.isPinned && (
               <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-800">
-                <BookmarkCheck className="w-3 h-3 text-amber-600" />
+                <Pin className="w-3 h-3 text-amber-600 fill-amber-600" />
                 Unggulan
               </span>
             )}

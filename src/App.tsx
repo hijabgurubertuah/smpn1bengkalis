@@ -81,13 +81,20 @@ const getInitialSchoolConfig = (): SchoolConfig => {
         mobileBottomNav: { ...base.mobileBottomNav, ...dedicatedDock },
       };
     }
+    // Pre-seed local cache if not set yet for 0ms subsequent load
+    try {
+      if (!localStorage.getItem(lsKey)) {
+        localStorage.setItem(lsKey, JSON.stringify(base));
+      }
+    } catch {}
+
     return base;
   } catch {}
   return DEFAULT_SCHOOL_CONFIG;
 };
 
 const getInitialNewsArticles = (): NewsArticle[] => {
-  if (typeof window === 'undefined') return [];
+  if (typeof window === 'undefined') return DEFAULT_NEWS_ARTICLES;
   try {
     // 1. Dedicated posts cache (isolated, persistent across hard refresh)
     const dedicated = getDedicatedPostsCacheSync();
@@ -111,8 +118,15 @@ const getInitialNewsArticles = (): NewsArticle[] => {
         return parsed;
       }
     }
+
+    // Pre-seed local articles cache if not set yet
+    try {
+      if (!localStorage.getItem(lsKey)) {
+        localStorage.setItem(lsKey, JSON.stringify(DEFAULT_NEWS_ARTICLES));
+      }
+    } catch {}
   } catch {}
-  return [];
+  return DEFAULT_NEWS_ARTICLES;
 };
 
 export default function App() {
@@ -121,7 +135,7 @@ export default function App() {
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isInitialSyncing, setIsInitialSyncing] = useState(() => articles.length === 0);
+  const [isInitialSyncing, setIsInitialSyncing] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [syncToast, setSyncToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
@@ -167,26 +181,26 @@ export default function App() {
     }
 
     async function initAndSyncData() {
-      // 1. Instant local hydration from local cache
+      // 1. Instant local hydration from local cache (without erasing anything)
       try {
         const [localConfig, localArticles] = await Promise.all([
           loadSchoolConfig(),
           loadNewsArticles(),
         ]);
         if (isMounted) {
-          setConfig(localConfig);
+          if (localConfig) setConfig(localConfig);
           if (localArticles && localArticles.length > 0) {
             setArticles(localArticles);
-            setIsInitialSyncing(false);
           }
           setIsLoading(false);
+          setIsInitialSyncing(false);
         }
       } catch (err) {
         console.warn('Init cache error, using defaults:', err);
         if (isMounted) setIsLoading(false);
       }
 
-      // 2. Fetch fresh updates from Firebase on every page reload/refresh (differential sync)
+      // 2. Fetch fresh updates from Firebase on every page reload/refresh (differential sync without clearing cache)
       try {
         const syncRes = await fetchAndSyncLatestData();
         if (!isMounted) return;
@@ -212,7 +226,6 @@ export default function App() {
               if (isMounted) setSyncToast(null);
             }, 1200);
           }
-          setIsInitialSyncing(false);
         }
       } catch (err) {
         console.info('Live sync on reload skipped:', err);

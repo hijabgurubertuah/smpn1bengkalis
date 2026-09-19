@@ -159,10 +159,10 @@ export const AdminSyncTab: React.FC<AdminSyncTabProps> = ({
       if (res) {
         setDriveUser(res.user);
         setIsDriveConnected(true);
-        setToastNotice({ type: 'success', message: 'Google Drive terhubung' });
+        setToastNotice({ type: 'success', message: 'Penyimpanan media terhubung' });
       }
     } catch {
-      setToastNotice({ type: 'error', message: 'Gagal menghubungkan Google Drive' });
+      setToastNotice({ type: 'error', message: 'Gagal menghubungkan akun penyimpanan' });
     } finally {
       setConnectingDrive(false);
       setTimeout(() => setToastNotice(null), 1500);
@@ -173,7 +173,7 @@ export const AdminSyncTab: React.FC<AdminSyncTabProps> = ({
     await signOutGoogleDrive();
     setDriveUser(null);
     setIsDriveConnected(false);
-    setToastNotice({ type: 'success', message: 'Google Drive terputus' });
+    setToastNotice({ type: 'success', message: 'Penyimpanan media terputus' });
     setTimeout(() => setToastNotice(null), 1500);
   };
 
@@ -717,7 +717,7 @@ export const AdminSyncTab: React.FC<AdminSyncTabProps> = ({
           </div>
         </div>
 
-        {/* Google Drive Card */}
+        {/* Media Storage Card */}
         <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3 flex flex-col justify-between">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -726,7 +726,7 @@ export const AdminSyncTab: React.FC<AdminSyncTabProps> = ({
                   <HardDrive className="w-5 h-5" />
                 </span>
                 <div>
-                  <h4 className="text-sm font-bold text-slate-900">Google Drive</h4>
+                  <h4 className="text-sm font-bold text-slate-900">Penyimpanan Media</h4>
                   <p className="text-[11px] text-slate-500">Penyimpanan foto &amp; banner</p>
                 </div>
               </div>
@@ -738,7 +738,7 @@ export const AdminSyncTab: React.FC<AdminSyncTabProps> = ({
             </div>
             <p className="text-xs text-slate-600 truncate">
               {isDriveConnected
-                ? `Login: ${driveUser?.email || 'Akun Google Aktif'}`
+                ? `Login: ${driveUser?.email || 'Akun Aktif'}`
                 : 'Login untuk mengunggah gambar resolusi tinggi tanpa batas.'}
             </p>
           </div>
@@ -750,7 +750,7 @@ export const AdminSyncTab: React.FC<AdminSyncTabProps> = ({
               rel="noopener noreferrer"
               className="text-[11px] text-slate-500 hover:text-emerald-700 font-semibold"
             >
-              Buka Drive ↗
+              Buka Penyimpanan ↗
             </a>
 
             {isDriveConnected ? (

@@ -4,7 +4,6 @@ import {
   Plus,
   Edit2,
   Trash2,
-  BookmarkCheck,
   Search,
   FileText,
   Calendar,
@@ -778,7 +777,7 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
                   </div>
                 </div>
 
-                {/* Cover Image Upload / Google Drive Converter */}
+                {/* Cover Image Upload */}
                 <div className="space-y-2">
                   <ImageUploadButton
                     label="Cover Image"
@@ -786,7 +785,7 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
                     onChange={(url) => setCoverImage(url)}
                     preset="post"
                     aspectRatio="wide"
-                    placeholder="https://... atau tempel link Google Drive"
+                    placeholder="https://... atau tempel tautan gambar"
                     allowDriveConverter={true}
                   />
                 </div>
@@ -870,7 +869,7 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
                     onChange={(url) => setCoverImage(url)}
                     preset="post"
                     aspectRatio="wide"
-                    placeholder="https://... atau tempel link Google Drive"
+                    placeholder="https://... atau tempel tautan gambar"
                     allowDriveConverter={true}
                   />
                 </div>
@@ -1191,6 +1190,13 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
                 <thead>
                   <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[11px] tracking-wider">
                     <th className="py-3 px-3">Berita</th>
+                    {/* Di tampilan HP: Tombol pena untuk mengedit dan tombol penandaan sematkan diletakkan di samping setelah berita sebelum kategori */}
+                    <th className="py-3 px-2 text-center sm:hidden whitespace-nowrap">
+                      <span className="inline-flex items-center justify-center gap-1.5 text-slate-500 font-bold text-[11px]">
+                        <Edit2 className="w-3 h-3 text-blue-600" />
+                        <Pin className="w-3 h-3 text-amber-600" />
+                      </span>
+                    </th>
                     <th className="py-3 px-3">Kategori</th>
                     <th className="py-3 px-3">Tanggal</th>
                     <th className="py-3 px-3">Status Simpan</th>
@@ -1200,7 +1206,7 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
                 <tbody className="divide-y divide-slate-100">
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-8 text-center text-slate-400 text-xs">
+                      <td colSpan={6} className="py-8 text-center text-slate-400 text-xs">
                         Tidak ada berita ditemukan. Klik &quot;Tulis Berita Baru&quot; untuk membuat berita baru.
                       </td>
                     </tr>
@@ -1244,6 +1250,37 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
                                 )}
                               </div>
                             </div>
+                          </div>
+                        </td>
+
+                        {/* Di tampilan HP: Tombol pena untuk mengedit postingan sebelum tombol sematkan di samping setelah berita sebelum kategori */}
+                        <td className="py-3.5 px-2 text-center sm:hidden whitespace-nowrap">
+                          <div className="inline-flex items-center justify-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleStartEdit(art)}
+                              title="Edit Berita"
+                              aria-label="Edit Berita"
+                              className="p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all cursor-pointer inline-flex items-center justify-center active:scale-95"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleTogglePin(art)}
+                              title={art.isPinned ? 'Lepas Sematan (Pin)' : 'Sematkan Berita (Pin Unggulan)'}
+                              aria-label={art.isPinned ? 'Lepas Sematan' : 'Sematkan Berita'}
+                              className="p-2 rounded-xl transition-all cursor-pointer inline-flex items-center justify-center hover:bg-slate-100 active:scale-95"
+                            >
+                              <Pin
+                                className={`w-4 h-4 transition-colors ${
+                                  art.isPinned
+                                    ? 'fill-amber-500 text-amber-500'
+                                    : 'text-slate-400 hover:text-slate-600'
+                                }`}
+                              />
+                            </button>
                           </div>
                         </td>
 
@@ -1298,26 +1335,30 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
                               </button>
                             )}
 
-                            <button
-                              type="button"
-                              onClick={() => handleTogglePin(art)}
-                              title={art.isPinned ? 'Lepas Pin' : 'Pasang Pin Unggulan'}
-                              className={`p-3 sm:p-2 rounded-xl transition-colors cursor-pointer flex items-center justify-center min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 ${
-                                art.isPinned
-                                  ? 'text-amber-600 bg-amber-50 hover:bg-amber-100'
-                                  : 'text-slate-400 hover:text-slate-700'
-                              }`}
-                            >
-                              <BookmarkCheck className="w-5 h-5 sm:w-4 sm:h-4" />
-                            </button>
-
+                            {/* Tombol pena untuk mengedit postingan dipindahkan ke sebelum tombol sematkan (desktop) */}
                             <button
                               type="button"
                               onClick={() => handleStartEdit(art)}
                               title="Edit Berita"
-                              className="p-3 sm:p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors cursor-pointer flex items-center justify-center min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0"
+                              className="hidden sm:flex p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors cursor-pointer items-center justify-center"
                             >
-                              <Edit2 className="w-5 h-5 sm:w-4 sm:h-4" />
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+
+                            {/* Tombol penandaan sematkan (desktop) */}
+                            <button
+                              type="button"
+                              onClick={() => handleTogglePin(art)}
+                              title={art.isPinned ? 'Lepas Pin' : 'Pasang Pin Unggulan'}
+                              className="hidden sm:flex p-2 rounded-xl transition-colors cursor-pointer items-center justify-center hover:bg-slate-100"
+                            >
+                              <Pin
+                                className={`w-4 h-4 transition-colors ${
+                                  art.isPinned
+                                    ? 'fill-amber-500 text-amber-500'
+                                    : 'text-slate-400 hover:text-slate-600'
+                                }`}
+                              />
                             </button>
 
                             <button

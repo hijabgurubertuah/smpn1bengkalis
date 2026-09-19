@@ -186,7 +186,7 @@ export const AdminGoogleAppsScriptTab: React.FC<AdminGoogleAppsScriptTabProps> =
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
             <FileSpreadsheet className="w-4 h-4 text-blue-600" />
-            <span>Google Drive & Sheets API</span>
+            <span>Media &amp; Spreadsheet API</span>
           </h3>
 
           <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -237,7 +237,7 @@ export const AdminGoogleAppsScriptTab: React.FC<AdminGoogleAppsScriptTabProps> =
             {/* Folder ID */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                ID Folder Google Drive
+                ID Folder Penyimpanan
               </label>
               <div className="relative">
                 <Folder className="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
@@ -318,7 +318,7 @@ export const AdminGoogleAppsScriptTab: React.FC<AdminGoogleAppsScriptTabProps> =
               title="Buka galeri gambar yang pernah diunggah dengan thumbnail rapi"
             >
               <FolderHeart className="w-3.5 h-3.5" />
-              <span>Buka Galeri Foto Drive</span>
+              <span>Buka Galeri Media</span>
             </button>
 
             {/* Tombol Kode Apps Script */}
@@ -346,11 +346,11 @@ export const AdminGoogleAppsScriptTab: React.FC<AdminGoogleAppsScriptTabProps> =
               <h4 className="text-xs font-bold text-white flex items-center gap-2">
                 <span>Kode Sumber Google Apps Script (Code.gs)</span>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-[10px] font-semibold border border-emerald-500/30">
-                  Versi Lengkap + Galeri Drive
+                  Versi Lengkap + Galeri Media
                 </span>
               </h4>
               <p className="text-[11px] text-slate-400">
-                Mendukung upload otomatis, direct link CDN berkecepatan tinggi, dan penarikan file folder Drive ke galeri.
+                Mendukung upload otomatis, direct link CDN berkecepatan tinggi, dan penarikan file folder ke galeri.
               </p>
             </div>
           </div>
@@ -457,7 +457,7 @@ export const AdminGoogleAppsScriptTab: React.FC<AdminGoogleAppsScriptTabProps> =
                 rel="noopener noreferrer"
                 className="text-slate-600 hover:underline flex items-center gap-1"
               >
-                <span>Buka Google Drive</span>
+                <span>Buka File</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>
@@ -473,7 +473,7 @@ export const AdminGoogleAppsScriptTab: React.FC<AdminGoogleAppsScriptTabProps> =
           // If selected in tester tab, we can show it as a selected preview
           setIsGalleryOpen(false);
         }}
-        title="Penyimpanan Gambar Google Drive (Galeri Apps Script)"
+        title="Penyimpanan Gambar (Galeri Apps Script)"
       />
 
       {/* Modal Kode Sumber Google Apps Script */}

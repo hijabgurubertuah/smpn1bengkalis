@@ -166,18 +166,18 @@ export async function uploadImageToDrive(
 ): Promise<DriveUploadResult> {
   let token = cachedAccessToken;
   if (!token) {
-    if (onStatusUpdate) onStatusUpdate('Menghubungkan ke Google Drive...');
+    if (onStatusUpdate) onStatusUpdate('Menghubungkan akun Google...');
     const authResult = await signInWithGoogleDrive();
     if (!authResult) {
-      throw new Error('Otentikasi Google Drive dibatalkan.');
+      throw new Error('Otentikasi dibatalkan.');
     }
     token = authResult.accessToken;
   }
 
-  if (onStatusUpdate) onStatusUpdate('Menyiapkan folder penyimpanan di Google Drive...');
+  if (onStatusUpdate) onStatusUpdate('Menyiapkan folder penyimpanan...');
   const folderId = await getOrCreateSchoolFolder(token);
 
-  if (onStatusUpdate) onStatusUpdate('Mengunggah gambar ke Google Drive...');
+  if (onStatusUpdate) onStatusUpdate('Mengunggah gambar...');
 
   const cleanFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
   const metadata = {
@@ -214,7 +214,7 @@ export async function uploadImageToDrive(
 
   if (!uploadRes.ok) {
     const errorBody = await uploadRes.text();
-    throw new Error(`Gagal mengunggah ke Google Drive (${uploadRes.status}): ${errorBody}`);
+    throw new Error(`Gagal mengunggah gambar (${uploadRes.status}): ${errorBody}`);
   }
 
   const uploadData = await uploadRes.json();
