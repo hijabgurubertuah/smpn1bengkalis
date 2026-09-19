@@ -287,6 +287,18 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
     setMainPostTab('list');
   };
 
+  const handleCancel = () => {
+    // Langsung keluar tanpa menyimpan perubahan apapun pada form/editor
+    resetForm();
+    setFeedbackToast({
+      type: 'success',
+      message: editingArticleId
+        ? 'Pengeditan dibatalkan. Perubahan tidak disimpan.'
+        : 'Penulisan dibatalkan.',
+    });
+    setTimeout(() => setFeedbackToast(null), 2500);
+  };
+
   const handleStartCreate = () => {
     resetForm();
     setIsEditing(true);
@@ -850,6 +862,19 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
                   </div>
                 </div>
 
+                {/* Cover Image di bawah Tanggal */}
+                <div>
+                  <ImageUploadButton
+                    label="Cover Image (Opsional)"
+                    value={coverImage}
+                    onChange={(url) => setCoverImage(url)}
+                    preset="post"
+                    aspectRatio="wide"
+                    placeholder="https://... atau tempel link Google Drive"
+                    allowDriveConverter={true}
+                  />
+                </div>
+
                 <div className="p-4 rounded-xl border border-purple-200 bg-purple-50/40 space-y-3">
                   {/* Top Sub-tabs (Url vs Kode Iframe) & Delete Button */}
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1032,32 +1057,6 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
                     </div>
                   )}
                 </div>
-
-                {/* Optional Cover & Intro for Embed Post */}
-                <div className="space-y-3 pt-2">
-                  <ImageUploadButton
-                    label="Cover Image (Opsional)"
-                    value={coverImage}
-                    onChange={(url) => setCoverImage(url)}
-                    preset="post"
-                    aspectRatio="wide"
-                    placeholder="https://... atau tempel link Google Drive"
-                    allowDriveConverter={true}
-                  />
-
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                      Teks Pengantar
-                    </label>
-                    <RichTextEditorWithImages
-                      value={content}
-                      onChange={setContent}
-                      placeholder="Tuliskan teks pengantar atau informasi panduan penggunaan..."
-                      minRows={4}
-                      articles={articles}
-                    />
-                  </div>
-                </div>
               </div>
             )}
 
@@ -1079,12 +1078,23 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
                 <div />
               )}
 
-              <div className="grid grid-cols-2 gap-2.5 sm:flex sm:items-center sm:gap-3 w-full sm:w-auto">
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-3 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  disabled={saving || savingLocal}
+                  className="flex-1 sm:flex-initial px-4 py-2.5 text-xs sm:text-sm font-bold text-slate-700 bg-white hover:bg-slate-100 active:bg-slate-200 border border-slate-300 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 shadow-2xs"
+                  title="Batalkan pengeditan dan kembali ke daftar"
+                >
+                  <X className="w-4 h-4 text-slate-500" />
+                  <span>Batal</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={handleSaveLocal}
                   disabled={saving || savingLocal}
-                  className="px-4 py-2.5 text-xs sm:text-sm font-bold text-amber-950 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 shadow-2xs w-full"
+                  className="flex-1 sm:flex-initial px-4 py-2.5 text-xs sm:text-sm font-bold text-amber-950 bg-amber-50 hover:bg-amber-100 border border-amber-300 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 shadow-2xs"
                   title="Simpan sebagai draft di perangkat ini"
                 >
                   <HardDrive className={`w-4 h-4 text-amber-700 ${savingLocal ? 'animate-pulse' : ''}`} />
@@ -1094,7 +1104,7 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
                 <button
                   type="submit"
                   disabled={saving || savingLocal}
-                  className="px-6 py-2.5 text-xs sm:text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-xl transition-all shadow-sm hover:shadow cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 w-full sm:w-auto"
+                  className="w-full sm:w-auto px-6 py-2.5 text-xs sm:text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 active:bg-blue-800 rounded-xl transition-all shadow-sm hover:shadow cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
                   title="Publikasikan postingan"
                 >
                   <CloudUpload className={`w-4 h-4 ${saving ? 'animate-bounce' : ''}`} />
