@@ -195,6 +195,16 @@ export default function App() {
             saveDedicatedDockCache(syncRes.config.mobileBottomNav);
           }
           setIsInitialSyncing(false);
+
+          if (syncRes.isDifferent) {
+            setSyncToast({
+              message: 'Data diperbarui dari cloud',
+              type: 'success',
+            });
+            setTimeout(() => {
+              if (isMounted) setSyncToast(null);
+            }, 1200);
+          }
         }
       } catch (err) {
         console.info('Live sync on reload skipped:', err);
@@ -555,7 +565,7 @@ export default function App() {
       {/* Single Centralized News Detail Modal */}
       {selectedArticle && (
         <NewsDetailModal
-          article={articles.find((a) => a.id === selectedArticle.id) || selectedArticle}
+          article={selectedArticle}
           onClose={() => setSelectedArticle(null)}
         />
       )}

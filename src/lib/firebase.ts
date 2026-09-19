@@ -12,10 +12,7 @@ import {
   deleteDoc,
   onSnapshot,
   Firestore,
-  persistentLocalCache,
-  persistentMultipleTabManager,
 } from 'firebase/firestore';
-import firebaseAppletConfig from '../../firebase-applet-config.json';
 import { SchoolConfig, NewsArticle } from '../types';
 import { DEFAULT_SCHOOL_CONFIG, DEFAULT_NEWS_ARTICLES } from './defaultData';
 import { getOfflineItem, setOfflineItem, clearOfflineStorage } from './offlineStorage';
@@ -29,54 +26,14 @@ try {
 }
 
 const FIREBASE_CONFIG = {
-  projectId: firebaseAppletConfig?.projectId || 'lateral-hope-tthv3',
-  appId: firebaseAppletConfig?.appId || '1:86435826094:web:9e6bcc0bd6cd12d35ae03f',
-  apiKey: firebaseAppletConfig?.apiKey || 'AIzaSyDt7N52r6H-DzarY-7UlcwlIfkQ0nUu6Q4',
-  authDomain: firebaseAppletConfig?.authDomain || 'lateral-hope-tthv3.firebaseapp.com',
-  firestoreDatabaseId:
-    firebaseAppletConfig?.firestoreDatabaseId ||
-    'ai-studio-websmpn1bengkali-5e1acd1a-2624-4c02-88cd-1246d9058afb',
-  storageBucket: firebaseAppletConfig?.storageBucket || 'lateral-hope-tthv3.firebasestorage.app',
-  messagingSenderId: firebaseAppletConfig?.messagingSenderId || '86435826094',
+  projectId: 'gen-lang-client-0999699449',
+  appId: '1:319360539506:web:894f0f9c3612848f8a9beb',
+  apiKey: 'AIzaSyCOZgLPjDQ61WyWptoYS1tVH_zZLsNVeFQ',
+  authDomain: 'gen-lang-client-0999699449.firebaseapp.com',
+  firestoreDatabaseId: 'ai-studio-e8590637-9651-4312-9d0c-eb416143de72',
+  storageBucket: 'gen-lang-client-0999699449.firebasestorage.app',
+  messagingSenderId: '319360539506',
 };
-
-// Sync Metadata Key to prevent unnecessary re-downloads of the entire database on reload
-export const LOCAL_SYNC_META_KEY = 'portal_local_sync_meta_v2';
-
-export interface SyncMeta {
-  configUpdatedAt?: string;
-  articlesUpdatedAt?: string;
-  articlesCount?: number;
-}
-
-export function getLocalSyncMeta(): SyncMeta | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem(LOCAL_SYNC_META_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
-export function setLocalSyncMeta(meta: Partial<SyncMeta>): void {
-  if (typeof window === 'undefined') return;
-  try {
-    const current = getLocalSyncMeta() || {};
-    const updated = { ...current, ...meta };
-    localStorage.setItem(LOCAL_SYNC_META_KEY, JSON.stringify(updated));
-  } catch {}
-}
-
-export async function updateCloudSyncMeta(updates: Partial<SyncMeta>): Promise<void> {
-  if (!db || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
-  try {
-    const metaRef = doc(db, 'school_portal', 'sync_meta');
-    await setDoc(metaRef, updates, { merge: true });
-  } catch {
-    // Non-blocking
-  }
-}
 
 // Dual Cache Keys: Separate storage for Public visitors vs Admin authenticated editors
 export const PUBLIC_CONFIG_KEY = 'smpn1_public_config_v4';
@@ -457,13 +414,10 @@ try {
     app = getApp();
   }
 
-  // Use initializeFirestore with multi-tab persistent offline cache and long polling
+  // Use initializeFirestore with experimentalAutoDetectLongPolling (cannot be combined with experimentalForceLongPolling)
   const firestoreSettings = {
     experimentalAutoDetectLongPolling: true,
     ignoreUndefinedProperties: true,
-    localCache: persistentLocalCache({
-      tabManager: persistentMultipleTabManager(),
-    }),
   };
 
   try {
@@ -473,20 +427,10 @@ try {
       db = initializeFirestore(app, firestoreSettings);
     }
   } catch {
-    // If persistentLocalCache fails in private browsing or iframe constraints, fallback to standard settings
-    try {
-      const fallbackSettings = {
-        experimentalAutoDetectLongPolling: true,
-        ignoreUndefinedProperties: true,
-      };
-      db = FIREBASE_CONFIG.firestoreDatabaseId
-        ? initializeFirestore(app, fallbackSettings, FIREBASE_CONFIG.firestoreDatabaseId)
-        : initializeFirestore(app, fallbackSettings);
-    } catch {
-      db = FIREBASE_CONFIG.firestoreDatabaseId
-        ? getFirestore(app, FIREBASE_CONFIG.firestoreDatabaseId)
-        : getFirestore(app);
-    }
+    // If already initialized, fallback gracefully
+    db = FIREBASE_CONFIG.firestoreDatabaseId
+      ? getFirestore(app, FIREBASE_CONFIG.firestoreDatabaseId)
+      : getFirestore(app);
   }
 
   try {
@@ -698,10 +642,6 @@ export async function saveSchoolConfig(config: SchoolConfig): Promise<boolean> {
       const configDocRef = doc(db, 'school_portal', 'main_config');
       await withTimeout(setDoc(configDocRef, cleanedConfig, { merge: true }), 4000);
       
-      const nowIso = new Date().toISOString();
-      setLocalSyncMeta({ configUpdatedAt: nowIso });
-      updateCloudSyncMeta({ configUpdatedAt: nowIso });
-
       // Update public cache as well
       const currentArticles = (await getCachedNewsArticles('public')) || DEFAULT_NEWS_ARTICLES;
       await saveToPublicCache(config, currentArticles);
@@ -791,7 +731,6 @@ export async function saveNewsArticle(article: NewsArticle): Promise<boolean> {
         pubUpdated = [cloudArticle, ...pubArticles];
       }
       await saveToPublicCache(pubConfig, pubUpdated);
-      await saveDedicatedPostsCache(pubUpdated);
     }
   } catch (e) {
     console.error('Error saving article locally', e);
@@ -803,12 +742,6 @@ export async function saveNewsArticle(article: NewsArticle): Promise<boolean> {
       const cleanedArticle = sanitizeNoBase64(cloudArticle);
       const articleDoc = doc(db, 'news_articles', cloudArticle.id);
       await withTimeout(setDoc(articleDoc, cleanedArticle, { merge: true }), 3500);
-
-      const nowIso = new Date().toISOString();
-      const currentArticles = (await getCachedNewsArticles('public')) || [];
-      setLocalSyncMeta({ articlesUpdatedAt: nowIso, articlesCount: currentArticles.length });
-      updateCloudSyncMeta({ articlesUpdatedAt: nowIso, articlesCount: currentArticles.length });
-
       return true;
     } catch (err) {
       console.info('Firestore article sync deferred, saved locally:', err);
@@ -832,11 +765,6 @@ export async function deleteNewsArticle(articleId: string): Promise<boolean> {
     const pubFiltered = pubArticles.filter((a) => a.id !== articleId);
     const pubConfig = (await getCachedSchoolConfig('public')) || DEFAULT_SCHOOL_CONFIG;
     await saveToPublicCache(pubConfig, pubFiltered);
-    await saveDedicatedPostsCache(pubFiltered);
-
-    const nowIso = new Date().toISOString();
-    setLocalSyncMeta({ articlesUpdatedAt: nowIso, articlesCount: pubFiltered.length });
-    updateCloudSyncMeta({ articlesUpdatedAt: nowIso, articlesCount: pubFiltered.length });
   } catch (e) {
     console.error('Error deleting article locally', e);
   }
@@ -1166,16 +1094,15 @@ export function areArticlesEqual(
 }
 
 /**
- * Directly fetch latest data from Cloud Firestore (with Smart Metadata Timestamp check to prevent re-downloading entire database).
+ * Directly fetch latest data from Cloud Firestore (bypassing local cache).
  */
-export async function fetchLatestFromFirebase(forceFullFetch?: boolean): Promise<{
+export async function fetchLatestFromFirebase(): Promise<{
   success: boolean;
   config: SchoolConfig | null;
   articles: NewsArticle[] | null;
   customDefaultConfig?: SchoolConfig | null;
   customDefaultArticles?: NewsArticle[] | null;
   customDefaultMeta?: { hasCustomDefault: boolean; savedAt?: string };
-  isUpToDate?: boolean;
   error?: string;
 }> {
   if (!db || (typeof navigator !== 'undefined' && !navigator.onLine)) {
@@ -1186,79 +1113,7 @@ export async function fetchLatestFromFirebase(forceFullFetch?: boolean): Promise
     const configDocRef = doc(db, 'school_portal', 'main_config');
     const articlesColRef = collection(db, 'news_articles');
     const customDefaultDocRef = doc(db, 'school_portal', 'custom_defaults');
-    const syncMetaDocRef = doc(db, 'school_portal', 'sync_meta');
 
-    // 1. Check sync_meta first if local cache exists and full fetch is not forced
-    const localMeta = getLocalSyncMeta();
-    const cachedConfig = await getCachedSchoolConfig();
-    const cachedArticles = await getCachedNewsArticles();
-
-    if (
-      !forceFullFetch &&
-      cachedConfig &&
-      cachedArticles &&
-      cachedArticles.length > 0 &&
-      localMeta?.configUpdatedAt &&
-      localMeta?.articlesUpdatedAt
-    ) {
-      try {
-        const metaSnap = await withTimeout(getDoc(syncMetaDocRef), 2200).catch(() => null);
-        if (metaSnap && metaSnap.exists()) {
-          const cloudMeta = metaSnap.data() as SyncMeta;
-          const isConfigMatch = cloudMeta.configUpdatedAt === localMeta.configUpdatedAt;
-          const isArticlesMatch =
-            cloudMeta.articlesUpdatedAt === localMeta.articlesUpdatedAt &&
-            (cloudMeta.articlesCount === undefined || cloudMeta.articlesCount === localMeta.articlesCount);
-
-          if (isConfigMatch && isArticlesMatch) {
-            // Both are completely identical to Firestore; 0 full documents re-downloaded
-            return {
-              success: true,
-              config: cachedConfig,
-              articles: cachedArticles,
-              isUpToDate: true,
-            };
-          }
-
-          // If only config updated in cloud:
-          if (!isConfigMatch && isArticlesMatch) {
-            const configSnap = await withTimeout(getDoc(configDocRef), 3000).catch(() => null);
-            if (configSnap && configSnap.exists()) {
-              const cloudConfig = normalizeSchoolConfig(configSnap.data() as SchoolConfig);
-              setLocalSyncMeta({ configUpdatedAt: cloudMeta.configUpdatedAt });
-              return {
-                success: true,
-                config: cloudConfig,
-                articles: cachedArticles,
-              };
-            }
-          }
-
-          // If only articles updated in cloud:
-          if (isConfigMatch && !isArticlesMatch) {
-            const articlesSnap = await withTimeout(getDocs(articlesColRef), 3500).catch(() => null);
-            if (articlesSnap) {
-              const arts: NewsArticle[] = [];
-              articlesSnap.forEach((d) => arts.push(d.data() as NewsArticle));
-              arts.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
-              setLocalSyncMeta({
-                articlesUpdatedAt: cloudMeta.articlesUpdatedAt,
-                articlesCount: arts.length,
-              });
-              return {
-                success: true,
-                config: cachedConfig,
-                articles: arts,
-              };
-            }
-          }
-        }
-      } catch (metaCheckErr) {
-        console.info('Metadata check skipped, proceeding with full fetch:', metaCheckErr);
-      }
-    }
-
-    // 2. Full fetch if metadata mismatch, missing sync_meta, or first visit
     const [configSnap, articlesSnap, customDefaultSnap] = await Promise.all([
       withTimeout(getDoc(configDocRef), 4000).catch(() => null),
       withTimeout(getDocs(articlesColRef), 4000).catch(() => null),
@@ -1302,20 +1157,6 @@ export async function fetchLatestFromFirebase(forceFullFetch?: boolean): Promise
       cloudArticles = DEFAULT_NEWS_ARTICLES;
     }
 
-    // Seed/sync metadata in Firestore and local state
-    try {
-      const now = new Date().toISOString();
-      const metaToSave: SyncMeta = {
-        configUpdatedAt: now,
-        articlesUpdatedAt: now,
-        articlesCount: cloudArticles.length,
-      };
-      setLocalSyncMeta(metaToSave);
-      updateCloudSyncMeta(metaToSave);
-    } catch {
-      // Non-blocking
-    }
-
     return {
       success: true,
       config: cloudConfig,
@@ -1343,10 +1184,7 @@ export interface CloudSyncResult {
  * Direct fetch from Firebase Firestore, automatically updating appropriate cache (Public / Admin).
  * Used when page reloads / refreshes, or when user clicks the refresh button.
  */
-export async function fetchAndSyncLatestData(
-  forceScope?: 'public' | 'admin',
-  forceFull?: boolean
-): Promise<CloudSyncResult> {
+export async function fetchAndSyncLatestData(forceScope?: 'public' | 'admin'): Promise<CloudSyncResult> {
   const scope = forceScope || (isAdminAuthenticated() ? 'admin' : 'public');
   const cachedConfig = (await getCachedSchoolConfig(scope)) || DEFAULT_SCHOOL_CONFIG;
   const cachedArticles = (await getCachedNewsArticles(scope)) || DEFAULT_NEWS_ARTICLES;
@@ -1363,7 +1201,7 @@ export async function fetchAndSyncLatestData(
   }
 
   try {
-    const latest = await fetchLatestFromFirebase(forceFull);
+    const latest = await fetchLatestFromFirebase();
     if (!latest.success || !latest.config) {
       return {
         success: false,
@@ -1372,17 +1210,6 @@ export async function fetchAndSyncLatestData(
         articles: cachedArticles,
         message: latest.error || 'Gagal memuat data dari Firebase.',
         source: 'cache',
-      };
-    }
-
-    if (latest.isUpToDate) {
-      return {
-        success: true,
-        isDifferent: false,
-        config: cachedConfig,
-        articles: cachedArticles,
-        message: 'Versi terbaru',
-        source: 'cloud',
       };
     }
 
@@ -1596,13 +1423,6 @@ export function subscribeToCloudConfig(
         if (snapshot.exists()) {
           const cloudData = snapshot.data();
           const normalized = normalizeSchoolConfig(cloudData as SchoolConfig);
-          // Keep public local cache and sync meta updated
-          getCachedNewsArticles().then((currentArticles) => {
-            saveToPublicCache(normalized, currentArticles || DEFAULT_NEWS_ARTICLES);
-          });
-          setLocalSyncMeta({
-            configUpdatedAt: new Date().toISOString(),
-          });
           onUpdate(normalized);
         }
       },
@@ -1619,7 +1439,7 @@ export function subscribeToCloudConfig(
 
 /**
  * Subscribe to real-time changes of news articles in Firestore.
- * Automatically triggers callback whenever an article is created, edited, deleted, or liked.
+ * Automatically triggers callback whenever an article is created, edited, or deleted.
  */
 export function subscribeToCloudArticles(
   onUpdate: (articles: NewsArticle[]) => void
@@ -1633,27 +1453,16 @@ export function subscribeToCloudArticles(
     const unsubscribe = onSnapshot(
       articlesColRef,
       (snapshot) => {
-        const arts: NewsArticle[] = [];
-        snapshot.forEach((d) => {
-          arts.push(d.data() as NewsArticle);
-        });
-        arts.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
-        
-        // Save to dedicated posts cache immediately
-        saveDedicatedPostsCache(arts);
-
-        // Keep public local cache and sync meta updated
-        getCachedSchoolConfig().then((cfg) => {
-          if (cfg) {
-            saveToPublicCache(cfg, arts);
-          }
-        });
-        setLocalSyncMeta({
-          articlesUpdatedAt: new Date().toISOString(),
-          articlesCount: arts.length,
-        });
-
-        onUpdate(arts);
+        if (!snapshot.empty) {
+          const arts: NewsArticle[] = [];
+          snapshot.forEach((d) => {
+            arts.push(d.data() as NewsArticle);
+          });
+          arts.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+          // Save to dedicated posts cache immediately
+          saveDedicatedPostsCache(arts);
+          onUpdate(arts);
+        }
       },
       (error) => {
         console.info('Firestore realtime articles listener suspended:', error);
