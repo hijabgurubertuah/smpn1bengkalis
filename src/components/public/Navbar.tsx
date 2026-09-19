@@ -13,7 +13,6 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { PWAInstallButton } from './PWAInstallButton';
-import { hardResetAppCache } from '../../lib/offlineStorage';
 
 interface NavbarProps {
   config: SchoolConfig;
@@ -40,7 +39,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-  const [isHardResetting, setIsHardResetting] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
@@ -68,12 +66,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  // Direct 1-click Hard Reset & Cache Clear
-  const handleExecuteHardReset = async () => {
-    setIsHardResetting(true);
-    await hardResetAppCache();
-  };
 
   // Auto-close mobile menu when tapping or clicking outside the mobile menu list
   useEffect(() => {
@@ -308,17 +300,17 @@ export const Navbar: React.FC<NavbarProps> = ({
               </a>
             )}
 
-            {/* Direct 1-Click Hard Reset & Clear Cache Button (Right beside Settings) */}
+            {/* Differential Sync & Refresh Button (Checks cloud vs local without wiping cache) */}
             <button
               id="btn-navbar-refresh"
               type="button"
-              onClick={handleExecuteHardReset}
-              disabled={isHardResetting}
+              onClick={onRefresh}
+              disabled={isRefreshing}
               className="p-2.5 border border-slate-200 hover:border-blue-500 bg-slate-50 hover:bg-blue-50 text-slate-600 hover:text-blue-600 rounded-xl transition-all cursor-pointer shadow-xs disabled:opacity-50"
-              title="Hard Reset: Bersihkan Seluruh Cache & Muat Ulang Penuh"
-              aria-label="Hard Reset dan Bersihkan Cache"
+              title="Periksa Pembaruan & Sinkronkan Data Cloud"
+              aria-label="Sinkronkan Data Cloud"
             >
-              <RefreshCw className={`w-4 h-4 ${isHardResetting ? 'animate-spin text-blue-600' : 'text-slate-600'}`} />
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-blue-600' : 'text-slate-600'}`} />
             </button>
 
             {/* The single, unified admin panel button with gear icon */}
@@ -337,17 +329,17 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex lg:hidden items-center gap-1.5 sm:gap-2 shrink-0">
             <PWAInstallButton />
 
-            {/* Direct 1-Click Hard Reset Button on Mobile */}
+            {/* Differential Sync & Refresh Button on Mobile */}
             <button
               id="btn-navbar-refresh-mobile"
               type="button"
-              onClick={handleExecuteHardReset}
-              disabled={isHardResetting}
+              onClick={onRefresh}
+              disabled={isRefreshing}
               className="p-1.5 sm:p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer disabled:opacity-50 shrink-0"
-              title="Hard Reset: Bersihkan Cache & Muat Ulang Penuh"
-              aria-label="Hard Reset dan Bersihkan Cache"
+              title="Periksa Pembaruan & Sinkronkan Data Cloud"
+              aria-label="Sinkronkan Data Cloud"
             >
-              <RefreshCw className={`w-4 h-4 ${isHardResetting ? 'animate-spin text-blue-600' : 'text-slate-700'}`} />
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-blue-600' : 'text-slate-700'}`} />
             </button>
 
             <button
@@ -459,42 +451,6 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       )}
     </nav>
-
-    {/* Fullscreen Hard Reset Loading Screen */}
-    {isHardResetting && (
-      <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-white text-center animate-in fade-in duration-200">
-        <style>{`
-          @keyframes rotate-y-anim {
-            0% { transform: rotateY(0deg); }
-            100% { transform: rotateY(360deg); }
-          }
-          .animate-rotate-y {
-            animation: rotate-y-anim 2.5s linear infinite;
-            transform-style: preserve-3d;
-          }
-        `}</style>
-        <div style={{ perspective: '1000px' }} className="mb-4">
-          <div className="w-20 h-20 rounded-2xl bg-white/10 border border-white/20 p-2.5 flex items-center justify-center shadow-2xl animate-rotate-y">
-            {identity.logoUrl ? (
-              <img
-                src={identity.logoUrl}
-                alt={identity.name}
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-contain"
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                }}
-              />
-            ) : (
-              <School className="w-10 h-10 text-blue-400" />
-            )}
-          </div>
-        </div>
-        <h3 className="text-xl font-black text-white tracking-widest animate-pulse uppercase">
-          SMPN 1 BENGKALIS
-        </h3>
-      </div>
-    )}
     </>
   );
 };

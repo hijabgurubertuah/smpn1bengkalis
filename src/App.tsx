@@ -157,6 +157,15 @@ export default function App() {
   useEffect(() => {
     let isMounted = true;
 
+    // Clean up hard_reset query param from URL if present so it doesn't linger
+    if (typeof window !== 'undefined' && window.location.search.includes('hard_reset=')) {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('hard_reset');
+        window.history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
+      } catch {}
+    }
+
     async function initAndSyncData() {
       // 1. Instant local hydration from local cache
       try {
@@ -177,26 +186,24 @@ export default function App() {
         if (isMounted) setIsLoading(false);
       }
 
-      // 2. Fetch fresh updates from Firebase on every page reload/refresh
+      // 2. Fetch fresh updates from Firebase on every page reload/refresh (differential sync)
       try {
         const syncRes = await fetchAndSyncLatestData();
         if (!isMounted) return;
 
         if (syncRes.success && syncRes.config) {
-          setConfig(syncRes.config);
-          if (syncRes.articles) {
-            setArticles(syncRes.articles);
-            saveDedicatedPostsCache(syncRes.articles);
-          }
-          if (syncRes.config.principal) {
-            saveDedicatedPrincipalCache(syncRes.config.principal);
-          }
-          if (syncRes.config.mobileBottomNav) {
-            saveDedicatedDockCache(syncRes.config.mobileBottomNav);
-          }
-          setIsInitialSyncing(false);
-
           if (syncRes.isDifferent) {
+            setConfig(syncRes.config);
+            if (syncRes.articles) {
+              setArticles(syncRes.articles);
+              saveDedicatedPostsCache(syncRes.articles);
+            }
+            if (syncRes.config.principal) {
+              saveDedicatedPrincipalCache(syncRes.config.principal);
+            }
+            if (syncRes.config.mobileBottomNav) {
+              saveDedicatedDockCache(syncRes.config.mobileBottomNav);
+            }
             setSyncToast({
               message: 'Data diperbarui dari cloud',
               type: 'success',
@@ -205,6 +212,7 @@ export default function App() {
               if (isMounted) setSyncToast(null);
             }, 1200);
           }
+          setIsInitialSyncing(false);
         }
       } catch (err) {
         console.info('Live sync on reload skipped:', err);
@@ -274,32 +282,44 @@ export default function App() {
     };
   }, []);
 
-  // Manual refresh trigger for public and admin views
+  // Manual refresh trigger for public and admin views (Differential sync without clearing local cache)
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
     try {
       const res = await fetchAndSyncLatestData(isAdminMode ? 'admin' : 'public');
       if (res.success) {
-        setConfig(res.config);
-        setArticles(res.articles);
-        setSyncToast({
-          message: res.isDifferent ? 'Data diperbarui' : 'Versi terbaru',
-          type: 'success',
-        });
+        if (res.isDifferent && res.config) {
+          setConfig(res.config);
+          if (res.articles) {
+            setArticles(res.articles);
+            saveDedicatedPostsCache(res.articles);
+          }
+          if (res.config.principal) saveDedicatedPrincipalCache(res.config.principal);
+          if (res.config.mobileBottomNav) saveDedicatedDockCache(res.config.mobileBottomNav);
+          setSyncToast({
+            message: 'Data diperbarui dari cloud',
+            type: 'success',
+          });
+        } else {
+          setSyncToast({
+            message: 'Konten sudah versi terbaru',
+            type: 'success',
+          });
+        }
       } else {
         setSyncToast({
-          message: res.message || 'Mode offline',
+          message: res.message || 'Mode offline (menggunakan cache lokal)',
           type: 'info',
         });
       }
     } catch (err) {
       setSyncToast({
-        message: 'Gagal refresh',
+        message: 'Gagal memeriksa pembaruan',
         type: 'info',
       });
     } finally {
       setIsRefreshing(false);
-      setTimeout(() => setSyncToast(null), 1000);
+      setTimeout(() => setSyncToast(null), 1500);
     }
   };
 

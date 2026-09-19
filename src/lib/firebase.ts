@@ -1096,7 +1096,9 @@ export function areArticlesEqual(
 /**
  * Directly fetch latest data from Cloud Firestore (bypassing local cache).
  */
-export async function fetchLatestFromFirebase(): Promise<{
+export async function fetchLatestFromFirebase(
+  includeCustomDefault = false
+): Promise<{
   success: boolean;
   config: SchoolConfig | null;
   articles: NewsArticle[] | null;
@@ -1112,13 +1114,18 @@ export async function fetchLatestFromFirebase(): Promise<{
   try {
     const configDocRef = doc(db, 'school_portal', 'main_config');
     const articlesColRef = collection(db, 'news_articles');
-    const customDefaultDocRef = doc(db, 'school_portal', 'custom_defaults');
 
-    const [configSnap, articlesSnap, customDefaultSnap] = await Promise.all([
-      withTimeout(getDoc(configDocRef), 4000).catch(() => null),
-      withTimeout(getDocs(articlesColRef), 4000).catch(() => null),
-      withTimeout(getDoc(customDefaultDocRef), 4000).catch(() => null),
-    ]);
+    const fetches: Promise<any>[] = [
+      withTimeout(getDoc(configDocRef), 3500).catch(() => null),
+      withTimeout(getDocs(articlesColRef), 3500).catch(() => null),
+    ];
+
+    if (includeCustomDefault) {
+      const customDefaultDocRef = doc(db, 'school_portal', 'custom_defaults');
+      fetches.push(withTimeout(getDoc(customDefaultDocRef), 3500).catch(() => null));
+    }
+
+    const [configSnap, articlesSnap, customDefaultSnap] = await Promise.all(fetches);
 
     let cloudConfig: SchoolConfig | null = null;
     let cloudArticles: NewsArticle[] | null = null;
@@ -1201,7 +1208,7 @@ export async function fetchAndSyncLatestData(forceScope?: 'public' | 'admin'): P
   }
 
   try {
-    const latest = await fetchLatestFromFirebase();
+    const latest = await fetchLatestFromFirebase(false);
     if (!latest.success || !latest.config) {
       return {
         success: false,
@@ -1220,12 +1227,13 @@ export async function fetchAndSyncLatestData(forceScope?: 'public' | 'admin'): P
     const articlesDiff = !areArticlesEqual(cachedArticles, cloudArticles);
     const isDifferent = configDiff || articlesDiff;
 
-    if (scope === 'public') {
-      // Update public cache with published cloud data
-      await saveToPublicCache(cloudConfig, cloudArticles);
-    } else {
-      // Update admin cache with cloud data
-      await saveToAdminCache(cloudConfig, cloudArticles);
+    // Only update cache when difference is detected to prevent unnecessary disk I/O
+    if (isDifferent) {
+      if (scope === 'public') {
+        await saveToPublicCache(cloudConfig, cloudArticles);
+      } else {
+        await saveToAdminCache(cloudConfig, cloudArticles);
+      }
     }
 
     // If custom defaults exist, ensure they're saved
@@ -1247,10 +1255,10 @@ export async function fetchAndSyncLatestData(forceScope?: 'public' | 'admin'): P
     return {
       success: true,
       isDifferent,
-      config: cloudConfig,
-      articles: cloudArticles,
-      message: isDifferent ? 'Data diperbarui' : 'Versi terbaru',
-      source: 'cloud',
+      config: isDifferent ? cloudConfig : cachedConfig,
+      articles: isDifferent ? cloudArticles : cachedArticles,
+      message: isDifferent ? 'Data diperbarui dari cloud' : 'Konten sudah versi terbaru',
+      source: isDifferent ? 'cloud' : 'cache',
     };
   } catch (err: unknown) {
     return {
@@ -1354,7 +1362,7 @@ export async function forceRefreshFromFirebase(): Promise<{
   articles?: NewsArticle[];
   message: string;
 }> {
-  const latest = await fetchLatestFromFirebase();
+  const latest = await fetchLatestFromFirebase(true);
   if (!latest.success || !latest.config) {
     return {
       success: false,
@@ -1365,16 +1373,7 @@ export async function forceRefreshFromFirebase(): Promise<{
   const finalArticles = latest.articles || DEFAULT_NEWS_ARTICLES;
 
   try {
-    await clearOfflineStorage();
-    localStorage.removeItem(LEGACY_CONFIG_KEY);
-    localStorage.removeItem(LEGACY_NEWS_KEY);
-    localStorage.removeItem('offline_school_config');
-    localStorage.removeItem('offline_news_articles');
-    localStorage.removeItem(PUBLIC_CONFIG_KEY);
-    localStorage.removeItem(PUBLIC_NEWS_KEY);
-    localStorage.removeItem(ADMIN_CONFIG_KEY);
-    localStorage.removeItem(ADMIN_NEWS_KEY);
-
+    // Atomically overwrite caches with latest cloud data without clearing first
     await saveToAdminCache(latest.config, finalArticles);
     await saveToPublicCache(latest.config, finalArticles);
 
@@ -1393,7 +1392,7 @@ export async function forceRefreshFromFirebase(): Promise<{
       success: true,
       config: latest.config,
       articles: latest.articles,
-      message: 'Penyimpanan lokal berhasil dibersihkan dan data terbaru dari Firebase telah diunduh.',
+      message: 'Data terbaru dari cloud berhasil disinkronkan ke penyimpanan lokal.',
     };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
