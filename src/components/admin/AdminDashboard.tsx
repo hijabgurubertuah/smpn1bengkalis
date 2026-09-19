@@ -98,13 +98,36 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onDataRestored,
   onSyncFromCloud,
 }) => {
-  const [activeTab, setActiveTab] = useState<AdminTab>('posts');
+  const getInitialActiveTab = (): AdminTab => {
+    if (typeof window === 'undefined') return 'posts';
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab') as AdminTab;
+      if (tabParam) return tabParam;
+      const savedTab = sessionStorage.getItem('admin_active_tab') as AdminTab;
+      if (savedTab) return savedTab;
+    } catch {}
+    return 'posts';
+  };
+
+  const [activeTab, setActiveTab] = useState<AdminTab>(() => getInitialActiveTab());
   const [savingTab, setSavingTab] = useState(false);
   const [unsavedTabs, setUnsavedTabs] = useState<Record<string, boolean>>({});
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('Perubahan Tersimpan!');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [isSystemCategoryOpen, setIsSystemCategoryOpen] = useState(false);
+
+  // Sync activeTab to sessionStorage and URL
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('admin_active_tab', activeTab);
+      const url = new URL(window.location.href);
+      url.searchParams.set('admin', '1');
+      url.searchParams.set('tab', activeTab);
+      window.history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
+    } catch {}
+  }, [activeTab]);
 
   const [adminRole, setAdminRole] = useState<'superadmin' | 'admin'>('admin');
   const [adminName, setAdminName] = useState<string>('Admin Utama');

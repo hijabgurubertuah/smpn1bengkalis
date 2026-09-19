@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NewsArticle, SchoolConfig } from '../../types';
 import {
   Plus,
@@ -78,12 +78,57 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
   const activeCategories =
     categories && categories.length > 0 ? categories : DEFAULT_CATEGORIES;
 
+  // Initial state helpers from sessionStorage / URL to persist editing state across refresh
+  const initialDraft = (() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = sessionStorage.getItem('admin_post_draft_state');
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return null;
+  })();
+
+  const getInitialEditingArticleId = (): string | null => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const editParam = params.get('edit');
+      if (editParam) return editParam === 'new' ? null : editParam;
+      const saved = sessionStorage.getItem('admin_editing_article_id');
+      if (saved) return saved === 'new' ? null : saved;
+    } catch {}
+    return null;
+  };
+
+  const getInitialMainPostTab = (): 'list' | 'write' => {
+    if (typeof window === 'undefined') return 'write';
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('edit')) return 'write';
+      const saved = sessionStorage.getItem('admin_posts_main_tab') as 'list' | 'write';
+      if (saved) return saved;
+    } catch {}
+    return 'write';
+  };
+
   const [search, setSearch] = useState('');
   const [filterTab, setFilterTab] = useState<'all' | 'drafts' | 'cloud'>('all');
-  const [mainPostTab, setMainPostTab] = useState<'list' | 'write'>('write');
-  const [isEditing, setIsEditing] = useState(true);
-  const [editingArticleId, setEditingArticleId] = useState<string | null>(null);
-  const [postEditorTab, setPostEditorTab] = useState<'content' | 'embed'>('content');
+  const [mainPostTab, setMainPostTab] = useState<'list' | 'write'>(() => getInitialMainPostTab());
+  const [isEditing, setIsEditing] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('edit')) return true;
+      const saved = sessionStorage.getItem('admin_posts_main_tab');
+      if (saved === 'list') return false;
+    } catch {}
+    return true;
+  });
+  const [editingArticleId, setEditingArticleId] = useState<string | null>(() => getInitialEditingArticleId());
+  const [postEditorTab, setPostEditorTab] = useState<'content' | 'embed'>(() => {
+    if (initialDraft?.embedUrl) return 'embed';
+    return 'content';
+  });
 
   // Category Management Modal State
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -127,28 +172,28 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
     }
   };
 
-  // Form states
-  const [title, setTitle] = useState('');
-  const [category, setCategory] = useState(() => activeCategories[0] || 'Prestasi');
-  const [summary, setSummary] = useState('');
-  const [content, setContent] = useState('');
-  const [coverImage, setCoverImage] = useState('');
-  const [author, setAuthor] = useState('Humas Instansi');
-  const [date, setDate] = useState(() => getTodayDateIndo());
-  const [isPinned, setIsPinned] = useState(false);
-  const [status, setStatus] = useState<'published' | 'draft'>('published');
+  // Form states initialized with active draft if available
+  const [title, setTitle] = useState(() => initialDraft?.title || '');
+  const [category, setCategory] = useState(() => initialDraft?.category || activeCategories[0] || 'Prestasi');
+  const [summary, setSummary] = useState(() => initialDraft?.summary || '');
+  const [content, setContent] = useState(() => initialDraft?.content || '');
+  const [coverImage, setCoverImage] = useState(() => initialDraft?.coverImage || '');
+  const [author, setAuthor] = useState(() => initialDraft?.author || 'Humas Instansi');
+  const [date, setDate] = useState(() => initialDraft?.date || getTodayDateIndo());
+  const [isPinned, setIsPinned] = useState(() => Boolean(initialDraft?.isPinned));
+  const [status, setStatus] = useState<'published' | 'draft'>(() => initialDraft?.status || 'published');
   const [saving, setSaving] = useState(false);
   const [savingLocal, setSavingLocal] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   // Embed states
-  const [galleryImages, setGalleryImages] = useState<string[]>([]);
-  const [actionLinkLabel, setActionLinkLabel] = useState('');
-  const [actionLinkUrl, setActionLinkUrl] = useState('');
-  const [embedUrl, setEmbedUrl] = useState('');
-  const [embedTitle, setEmbedTitle] = useState('');
-  const [embedSourceType, setEmbedSourceType] = useState<'url' | 'iframe'>('url');
-  const [rawIframeInput, setRawIframeInput] = useState('');
+  const [galleryImages, setGalleryImages] = useState<string[]>(() => initialDraft?.galleryImages || []);
+  const [actionLinkLabel, setActionLinkLabel] = useState(() => initialDraft?.actionLinkLabel || '');
+  const [actionLinkUrl, setActionLinkUrl] = useState(() => initialDraft?.actionLinkUrl || '');
+  const [embedUrl, setEmbedUrl] = useState(() => initialDraft?.embedUrl || '');
+  const [embedTitle, setEmbedTitle] = useState(() => initialDraft?.embedTitle || '');
+  const [embedSourceType, setEmbedSourceType] = useState<'url' | 'iframe'>(() => initialDraft?.embedSourceType || 'url');
+  const [rawIframeInput, setRawIframeInput] = useState(() => initialDraft?.rawIframeInput || '');
   const [showEmbedPreview, setShowEmbedPreview] = useState(true);
 
   // Delete modal states
@@ -162,6 +207,92 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
     type: 'success' | 'error';
     message: string;
   } | null>(null);
+
+  // Restore article from articles array if editingArticleId was set from URL/storage and form is empty
+  useEffect(() => {
+    if (!editingArticleId || editingArticleId === 'new') return;
+    if (title) return; // already restored from draft
+    const found = articles.find((a) => a.id === editingArticleId);
+    if (found) {
+      setTitle(found.title);
+      setCategory(found.category);
+      setSummary(found.summary);
+      setContent(found.content);
+      setCoverImage(found.coverImage);
+      setAuthor(found.author);
+      setDate(found.date || getTodayDateIndo());
+      setIsPinned(found.isPinned);
+      setStatus(found.status || 'published');
+      setGalleryImages(found.galleryImages || []);
+      setActionLinkLabel(found.actionLink?.label || '');
+      setActionLinkUrl(found.actionLink?.url || '');
+      setEmbedUrl(found.embedUrl || '');
+      setEmbedTitle(found.embedTitle || '');
+      if (found.embedUrl && found.embedUrl.includes('<iframe')) {
+        setEmbedSourceType('iframe');
+        setRawIframeInput(found.embedUrl);
+      } else {
+        setEmbedSourceType('url');
+        setRawIframeInput('');
+      }
+      setShowEmbedPreview(Boolean(found.embedUrl));
+      setPostEditorTab(found.embedUrl ? 'embed' : 'content');
+      setIsEditing(true);
+      setMainPostTab('write');
+    }
+  }, [articles, editingArticleId, title]);
+
+  // Continuously sync active draft to sessionStorage when in 'write' mode
+  useEffect(() => {
+    if (mainPostTab !== 'write') return;
+    try {
+      sessionStorage.setItem('admin_posts_main_tab', 'write');
+      if (editingArticleId) {
+        sessionStorage.setItem('admin_editing_article_id', editingArticleId);
+      } else {
+        sessionStorage.setItem('admin_editing_article_id', 'new');
+      }
+      const draftState = {
+        editingArticleId: editingArticleId || 'new',
+        title,
+        category,
+        summary,
+        content,
+        coverImage,
+        author,
+        date,
+        isPinned,
+        status,
+        galleryImages,
+        actionLinkLabel,
+        actionLinkUrl,
+        embedUrl,
+        embedTitle,
+        embedSourceType,
+        rawIframeInput,
+      };
+      sessionStorage.setItem('admin_post_draft_state', JSON.stringify(draftState));
+    } catch {}
+  }, [
+    mainPostTab,
+    editingArticleId,
+    title,
+    category,
+    summary,
+    content,
+    coverImage,
+    author,
+    date,
+    isPinned,
+    status,
+    galleryImages,
+    actionLinkLabel,
+    actionLinkUrl,
+    embedUrl,
+    embedTitle,
+    embedSourceType,
+    rawIframeInput,
+  ]);
 
   // --- CATEGORY MANAGEMENT HANDLERS ---
   const handleAddCategory = (e?: React.FormEvent) => {
@@ -284,6 +415,15 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
     setPostEditorTab('content');
     setFormError(null);
     setMainPostTab('list');
+
+    try {
+      sessionStorage.removeItem('admin_editing_article_id');
+      sessionStorage.removeItem('admin_post_draft_state');
+      sessionStorage.setItem('admin_posts_main_tab', 'list');
+      const url = new URL(window.location.href);
+      url.searchParams.delete('edit');
+      window.history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
+    } catch {}
   };
 
   const handleCancel = () => {
@@ -302,6 +442,14 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
     resetForm();
     setIsEditing(true);
     setMainPostTab('write');
+    try {
+      sessionStorage.setItem('admin_editing_article_id', 'new');
+      sessionStorage.setItem('admin_posts_main_tab', 'write');
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', 'posts');
+      url.searchParams.set('edit', 'new');
+      window.history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
+    } catch {}
     setTimeout(() => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }, 80);
@@ -335,6 +483,14 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
     setFormError(null);
     setIsEditing(true);
     setMainPostTab('write');
+    try {
+      sessionStorage.setItem('admin_editing_article_id', art.id);
+      sessionStorage.setItem('admin_posts_main_tab', 'write');
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', 'posts');
+      url.searchParams.set('edit', art.id);
+      window.history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
+    } catch {}
     setTimeout(() => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }, 80);
@@ -628,6 +784,17 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
                 handleStartCreate();
               } else {
                 setMainPostTab('write');
+                try {
+                  sessionStorage.setItem('admin_posts_main_tab', 'write');
+                  const url = new URL(window.location.href);
+                  url.searchParams.set('tab', 'posts');
+                  if (editingArticleId) {
+                    url.searchParams.set('edit', editingArticleId);
+                  } else {
+                    url.searchParams.set('edit', 'new');
+                  }
+                  window.history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
+                } catch {}
               }
             }}
             className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 py-2.5 px-4 sm:px-5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
@@ -642,7 +809,15 @@ export const AdminPostsTab: React.FC<AdminPostsTabProps> = ({
 
           <button
             type="button"
-            onClick={() => setMainPostTab('list')}
+            onClick={() => {
+              setMainPostTab('list');
+              try {
+                sessionStorage.setItem('admin_posts_main_tab', 'list');
+                const url = new URL(window.location.href);
+                url.searchParams.delete('edit');
+                window.history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
+              } catch {}
+            }}
             className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 py-2.5 px-4 sm:px-5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
               mainPostTab === 'list'
                 ? 'bg-blue-600 text-white shadow-sm'

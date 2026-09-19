@@ -45,6 +45,7 @@ import { AdminDashboard } from './components/admin/AdminDashboard';
 import { AdminLoginModal } from './components/admin/AdminLoginModal';
 import { MobileBottomNav } from './components/public/MobileBottomNav';
 import { NewsDetailModal } from './components/public/NewsDetailModal';
+import { RotateYLoadingScreen } from './components/common/RotateYLoadingScreen';
 import { ShieldCheck, Sparkles, CheckCircle2, RefreshCw, School } from 'lucide-react';
 import { syncPWAManifest } from './lib/usePWAInstall';
 import { openShopeeLink, DEFAULT_SHOPEE_AFFILIATE_URL, initShopeeLinkInterceptors, isMobileDevice } from './lib/shopeeHelper';
@@ -129,16 +130,50 @@ const getInitialNewsArticles = (): NewsArticle[] => {
   return DEFAULT_NEWS_ARTICLES;
 };
 
+const getInitialAdminMode = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  try {
+    const isAuth =
+      localStorage.getItem('admin_authenticated') === 'true' ||
+      sessionStorage.getItem('admin_authenticated') === 'true';
+    if (!isAuth) return false;
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('admin') || params.has('tab') || params.has('edit')) return true;
+
+    return sessionStorage.getItem('admin_mode_active') === 'true';
+  } catch {}
+  return false;
+};
+
 export default function App() {
   const [config, setConfig] = useState<SchoolConfig>(() => getInitialSchoolConfig());
   const [articles, setArticles] = useState<NewsArticle[]>(() => getInitialNewsArticles());
-  const [isAdminMode, setIsAdminMode] = useState(false);
+  const [isAdminMode, setIsAdminMode] = useState<boolean>(() => getInitialAdminMode());
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialSyncing, setIsInitialSyncing] = useState(false);
+  const [isSyncingData, setIsSyncingData] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [syncToast, setSyncToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
+
+  // Determine if the fullscreen rotate-Y loading screen should be active (immediate, no 2-sec wait)
+  const isScreenLoading = isSyncingData || isRefreshing || isInitialSyncing || isLoading;
+
+  // Sync admin mode to sessionStorage and URL query params
+  useEffect(() => {
+    if (isAdminMode) {
+      try {
+        sessionStorage.setItem('admin_mode_active', 'true');
+        const url = new URL(window.location.href);
+        if (!url.searchParams.has('admin')) {
+          url.searchParams.set('admin', '1');
+          window.history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
+        }
+      } catch {}
+    }
+  }, [isAdminMode]);
 
   // Auto-open article from URL parameter or popstate (?post=... or ?berita=...)
   useEffect(() => {
@@ -181,6 +216,7 @@ export default function App() {
     }
 
     async function initAndSyncData() {
+      setIsSyncingData(true);
       // 1. Instant local hydration from local cache (without erasing anything)
       try {
         const [localConfig, localArticles] = await Promise.all([
@@ -230,7 +266,10 @@ export default function App() {
       } catch (err) {
         console.info('Live sync on reload skipped:', err);
       } finally {
-        if (isMounted) setIsInitialSyncing(false);
+        if (isMounted) {
+          setIsInitialSyncing(false);
+          setIsSyncingData(false);
+        }
       }
     }
 
@@ -298,6 +337,7 @@ export default function App() {
   // Manual refresh trigger for public and admin views (Differential sync without clearing local cache)
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
+    setIsSyncingData(true);
     try {
       const res = await fetchAndSyncLatestData(isAdminMode ? 'admin' : 'public');
       if (res.success) {
@@ -332,6 +372,7 @@ export default function App() {
       });
     } finally {
       setIsRefreshing(false);
+      setIsSyncingData(false);
       setTimeout(() => setSyncToast(null), 1500);
     }
   };
@@ -342,17 +383,37 @@ export default function App() {
       localStorage.getItem('admin_authenticated') === 'true' ||
       sessionStorage.getItem('admin_authenticated') === 'true';
     if (isAuth) {
+      try {
+        sessionStorage.setItem('admin_mode_active', 'true');
+      } catch {}
       setIsAdminMode(true);
     } else {
       setIsLoginModalOpen(true);
     }
   };
 
+  // Close admin view and return to public portal
+  const handleCloseAdmin = () => {
+    setIsAdminMode(false);
+    try {
+      sessionStorage.removeItem('admin_mode_active');
+      sessionStorage.removeItem('admin_active_tab');
+      sessionStorage.removeItem('admin_editing_article_id');
+      sessionStorage.removeItem('admin_posts_main_tab');
+      sessionStorage.removeItem('admin_post_draft_state');
+      const url = new URL(window.location.href);
+      url.searchParams.delete('admin');
+      url.searchParams.delete('tab');
+      url.searchParams.delete('edit');
+      window.history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
+    } catch {}
+  };
+
   // Logout and lock admin session
   const handleLogoutAdmin = () => {
     localStorage.removeItem('admin_authenticated');
     sessionStorage.removeItem('admin_authenticated');
-    setIsAdminMode(false);
+    handleCloseAdmin();
   };
 
   // Handle configuration update from Admin
@@ -395,46 +456,12 @@ export default function App() {
   };
 
   if (isLoading) {
-    const schoolLogo = config.identity.logoUrl;
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white p-6 relative overflow-hidden">
-        {/* Subtle background glow */}
-        <div className="absolute w-72 h-72 bg-blue-600/10 rounded-full blur-3xl -top-10 -left-10 pointer-events-none" />
-        <div className="absolute w-72 h-72 bg-indigo-600/10 rounded-full blur-3xl -bottom-10 -right-10 pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col items-center text-center max-w-sm">
-          {/* School Logo */}
-          <div className="relative mb-6">
-            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 p-3 shadow-2xl flex items-center justify-center animate-pulse">
-              {schoolLogo ? (
-                <img
-                  src={schoolLogo}
-                  alt={config.identity.name || 'Logo Sekolah'}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-contain"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
-                />
-              ) : (
-                <School className="w-10 h-10 sm:w-12 sm:h-12 text-blue-400" />
-              )}
-            </div>
-            <div className="absolute -inset-1.5 rounded-3xl bg-blue-500/20 blur-md -z-10 animate-pulse" />
-          </div>
-
-          {/* Spinner & Italic Loading Text */}
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-            <p className="text-base sm:text-lg font-black text-white tracking-widest uppercase">
-              SMPN 1 BENGKALIS
-            </p>
-          </div>
-          <p className="text-xs text-slate-400 font-medium">
-            {config.identity.name || 'Portal Resmi Sekolah'}
-          </p>
-        </div>
-      </div>
+      <RotateYLoadingScreen
+        isVisible={true}
+        schoolName={config.identity.name || 'SMPN 1 BENGKALIS'}
+        schoolLogo={config.identity.logoUrl}
+      />
     );
   }
 
@@ -442,6 +469,11 @@ export default function App() {
   if (isAdminMode) {
     return (
       <>
+        <RotateYLoadingScreen
+          isVisible={isScreenLoading}
+          schoolName={config.identity.name || 'SMPN 1 BENGKALIS'}
+          schoolLogo={config.identity.logoUrl}
+        />
         {syncToast && (
           <div className="fixed top-4 right-4 z-50 flex items-center gap-2.5 bg-slate-900 text-white px-4 py-2.5 rounded-xl border border-slate-700 shadow-2xl animate-in slide-in-from-top-2 duration-200">
             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -455,7 +487,7 @@ export default function App() {
           onSaveArticle={handleSaveArticle}
           onSaveArticleLocally={handleSaveArticleLocally}
           onDeleteArticle={handleDeleteArticle}
-          onCloseAdmin={() => setIsAdminMode(false)}
+          onCloseAdmin={handleCloseAdmin}
           onLogout={handleLogoutAdmin}
           onDataRestored={handleDataRestored}
           onSyncFromCloud={handleSyncFromCloud}
@@ -470,6 +502,13 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 relative pb-20 md:pb-0 w-full max-w-full overflow-x-clip">
       
+      {/* Fullscreen Rotate-Y Loading Screen while downloading/syncing assets & data */}
+      <RotateYLoadingScreen
+        isVisible={isScreenLoading}
+        schoolName={config.identity.name || 'SMPN 1 BENGKALIS'}
+        schoolLogo={config.identity.logoUrl}
+      />
+
       {/* Sync Notification Toast */}
       {syncToast && (
         <div className="fixed top-4 right-4 z-50 flex items-center gap-2.5 bg-slate-900/95 text-white px-4 py-2.5 rounded-xl border border-slate-700 shadow-2xl backdrop-blur-md animate-in slide-in-from-top-2 duration-200">
@@ -484,6 +523,9 @@ export default function App() {
         onClose={() => setIsLoginModalOpen(false)}
         onSuccess={() => {
           setIsLoginModalOpen(false);
+          try {
+            sessionStorage.setItem('admin_mode_active', 'true');
+          } catch {}
           setIsAdminMode(true);
         }}
         configuredPassword={config.adminPassword || 'smpn1bks'}

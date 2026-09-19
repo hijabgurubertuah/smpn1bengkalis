@@ -49,6 +49,24 @@ html, body {
   transform-style: preserve-3d;
 }
 
+@keyframes rotateY3D {
+  0% {
+    transform: perspective(800px) rotateY(0deg);
+  }
+  50% {
+    transform: perspective(800px) rotateY(180deg);
+  }
+  100% {
+    transform: perspective(800px) rotateY(360deg);
+  }
+}
+
+.animate-rotate-y {
+  animation: rotateY3D 2.6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
 /* Subscript & Superscript styling rules */
 sub {
   font-size: 0.75em;
