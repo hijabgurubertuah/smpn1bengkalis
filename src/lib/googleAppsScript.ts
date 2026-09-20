@@ -384,8 +384,29 @@ export async function uploadFileViaAppsScript(
     );
   }
 
-  options?.onProgress?.('Membaca data file...');
-  const base64Data = await fileToBase64(file);
+  options?.onProgress?.('Mengoptimalkan & mengompresi gambar...');
+  
+  // Kompresi otomatis di browser sebelum kirim ke Google Apps Script
+  // Ini mencegah pengiriman file mentah berukuran 3-10MB yang membuat upload 30 detik+
+  let fileToUpload = file;
+  let base64Data: string;
+
+  if (file.type.startsWith('image/') && file.type !== 'image/svg+xml') {
+    try {
+      const { compressAndResizeImage } = await import('./imageOptimizer');
+      const compressed = await compressAndResizeImage(file, {
+        maxWidth: 1600,
+        maxHeight: 1600,
+        quality: 0.82,
+        format: 'image/jpeg',
+      });
+      base64Data = compressed.dataUrl;
+    } catch {
+      base64Data = await fileToBase64(file);
+    }
+  } else {
+    base64Data = await fileToBase64(file);
+  }
 
   const payload = {
     action: 'uploadFile',
@@ -396,7 +417,7 @@ export async function uploadFileViaAppsScript(
     spreadsheetId: (options?.spreadsheetId ?? storedConfig?.spreadsheetId ?? '').trim(),
   };
 
-  options?.onProgress?.('Mengunggah gambar via Apps Script...');
+  options?.onProgress?.('Mengunggah gambar ke Google Drive...');
 
   // Use text/plain;charset=utf-8 to avoid browser CORS preflight OPTIONS request
   const response = await fetch(cleanUrl, {
