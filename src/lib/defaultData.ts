@@ -1,6 +1,87 @@
-import { SchoolConfig, NewsArticle } from '../types';
+import { SchoolConfig, NewsArticle, GTKFormFieldConfig, GTKFormCustomConfig } from '../types';
 import { DEFAULT_THEME_CONFIG } from './themePresets';
 import { DEFAULT_APPS_SCRIPT_WEB_APP_URL, DEFAULT_APPS_SCRIPT_FOLDER_ID } from './googleAppsScript';
+
+export const DEFAULT_GTK_FORM_FIELDS: GTKFormFieldConfig[] = [
+  {
+    id: 'field_photo',
+    name: 'photoUrl',
+    label: 'Foto Profil Guru / GTK',
+    placeholder: 'Pilih foto atau tempel link foto...',
+    required: false,
+    enabled: true,
+    helperText: 'Unggah foto resmi atau formal dengan rasio 1:1',
+    type: 'image',
+  },
+  {
+    id: 'field_name',
+    name: 'name',
+    label: 'Nama Lengkap & Gelar',
+    placeholder: 'Contoh: Drs. H. Ahmad Fauzi, M.Pd',
+    required: true,
+    enabled: true,
+    helperText: 'Tuliskan nama lengkap beserta seluruh gelar akademik',
+    type: 'text',
+  },
+  {
+    id: 'field_nip',
+    name: 'nip',
+    label: 'NIP / NUPTK',
+    placeholder: "Masukkan NIP atau isi '-' jika belum ada",
+    required: false,
+    enabled: true,
+    helperText: 'Nomor Induk Pegawai atau NUPTK resmi',
+    type: 'text',
+  },
+  {
+    id: 'field_role',
+    name: 'role',
+    label: 'Tugas yang di-Ampu / Jabatan',
+    placeholder: 'Contoh: Guru Matematika / Wali Kelas IX-A',
+    required: true,
+    enabled: true,
+    helperText: 'Mata pelajaran yang diajar atau posisi tugas utama',
+    type: 'text',
+  },
+  {
+    id: 'field_quote',
+    name: 'quote',
+    label: 'Kata-kata Mutiara / Motto',
+    placeholder: 'Tuliskan motto inspiratif atau kata mutiara...',
+    required: true,
+    enabled: true,
+    helperText: 'Motto pendidikan atau pesan semangat untuk siswa',
+    type: 'textarea',
+  },
+  {
+    id: 'field_phone',
+    name: 'phone',
+    label: 'Nomor WhatsApp (Opsional)',
+    placeholder: 'Contoh: 081234567890',
+    required: false,
+    enabled: true,
+    helperText: 'Digunakan untuk koordinasi atau kontak publik',
+    type: 'tel',
+  },
+  {
+    id: 'field_email',
+    name: 'email',
+    label: 'Email (Opsional)',
+    placeholder: 'Contoh: guru@sekolah.sch.id',
+    required: false,
+    enabled: true,
+    helperText: 'Alamat email aktif pendidik',
+    type: 'email',
+  },
+];
+
+export const DEFAULT_GTK_FORM_CONFIG: GTKFormCustomConfig = {
+  formHeaderTitle: 'Formulir Biodata Pendidik & Tenaga Kependidikan',
+  formHeaderSubtitle: 'Lengkapi biodata resmi Anda di bawah ini untuk pendataan dan penampilan profil di carousel website sekolah.',
+  formSuccessMessage: 'Anda Sudah Berhasil Memasukkan Data!',
+  submitButtonText: 'Kirim & Simpan Biodata',
+  fields: DEFAULT_GTK_FORM_FIELDS,
+};
 
 export const DEFAULT_SCHOOL_CONFIG: SchoolConfig = {
   adminPassword: '',
@@ -136,6 +217,7 @@ export const DEFAULT_SCHOOL_CONFIG: SchoolConfig = {
   gtkList: [],
   gtkSectionTitle: "Guru & Tenaga Kependidikan",
   gtkSectionSubtitle: "Mengenal para pendidik dan tenaga kependidikan berdedikasi yang membimbing dan menginspirasi generasi penerus bangsa.",
+  gtkFormConfig: DEFAULT_GTK_FORM_CONFIG,
 };
 
 // Empty default articles: all articles are loaded purely from Firebase and cache

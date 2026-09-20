@@ -954,7 +954,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           )}
 
           {activeTab === 'gtk' && (
-            <AdminGTKTab config={config} onChange={handleConfigUpdate} />
+            <AdminGTKTab
+              config={config}
+              onChange={handleConfigUpdate}
+              onRefreshFromFirebase={handleManualCrossDeviceSync}
+            />
           )}
 
           {activeTab === 'agenda' && (

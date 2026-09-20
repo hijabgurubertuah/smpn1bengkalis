@@ -128,6 +128,7 @@ export function normalizeSchoolConfig(raw: Partial<SchoolConfig> | null | undefi
     gtkList: Array.isArray(sanitizedRaw.gtkList) ? sanitizedRaw.gtkList : (DEFAULT_SCHOOL_CONFIG.gtkList || []),
     gtkSectionTitle: sanitizedRaw.gtkSectionTitle !== undefined ? sanitizedRaw.gtkSectionTitle : DEFAULT_SCHOOL_CONFIG.gtkSectionTitle,
     gtkSectionSubtitle: sanitizedRaw.gtkSectionSubtitle !== undefined ? sanitizedRaw.gtkSectionSubtitle : DEFAULT_SCHOOL_CONFIG.gtkSectionSubtitle,
+    gtkFormConfig: sanitizedRaw.gtkFormConfig !== undefined ? sanitizedRaw.gtkFormConfig : DEFAULT_SCHOOL_CONFIG.gtkFormConfig,
   };
 }
 

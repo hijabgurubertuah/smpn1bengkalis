@@ -4,12 +4,13 @@ import {
   GraduationCap,
   ChevronLeft,
   ChevronRight,
-  Quote,
   User,
   Sparkles,
   Award,
   Phone,
   Mail,
+  X,
+  Maximize2,
 } from 'lucide-react';
 
 interface GTKCarouselSectionProps {
@@ -36,6 +37,9 @@ export const GTKCarouselSection: React.FC<GTKCarouselSectionProps> = ({ config }
   const [startX, setStartX] = useState(0);
   const [scrollLeftState, setScrollLeftState] = useState(0);
 
+  // Lightbox / Photo preview modal
+  const [previewTeacher, setPreviewTeacher] = useState<GTKItem | null>(null);
+
   const checkScroll = useCallback(() => {
     if (!scrollContainerRef.current) return;
     const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
@@ -54,7 +58,7 @@ export const GTKCarouselSection: React.FC<GTKCarouselSectionProps> = ({ config }
 
   // Continuous auto-advance loop (smooth auto scrolling every 3.8s)
   useEffect(() => {
-    if (visibleGtk.length <= 1 || isPaused || isDragging) return;
+    if (visibleGtk.length <= 1 || isPaused || isDragging || previewTeacher) return;
 
     const interval = setInterval(() => {
       if (!scrollContainerRef.current) return;
@@ -71,7 +75,7 @@ export const GTKCarouselSection: React.FC<GTKCarouselSectionProps> = ({ config }
     }, 3800);
 
     return () => clearInterval(interval);
-  }, [visibleGtk.length, isPaused, isDragging]);
+  }, [visibleGtk.length, isPaused, isDragging, previewTeacher]);
 
   const handleScroll = (direction: 'left' | 'right') => {
     if (!scrollContainerRef.current) return;
@@ -116,7 +120,7 @@ export const GTKCarouselSection: React.FC<GTKCarouselSectionProps> = ({ config }
   };
 
   if (visibleGtk.length === 0) {
-    return null; // Do not display section if no visible teacher data
+    return null;
   }
 
   return (
@@ -186,8 +190,12 @@ export const GTKCarouselSection: React.FC<GTKCarouselSectionProps> = ({ config }
               key={teacher.id || index}
               className="w-[250px] sm:w-[280px] shrink-0 snap-start bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-sm hover:shadow-xl hover:border-blue-300 transition-all duration-300 flex flex-col overflow-hidden group"
             >
-              {/* TOP: Kartu Thumbnail Foto GTK */}
-              <div className="relative aspect-square w-full bg-gradient-to-br from-slate-100 via-slate-200 to-blue-50 overflow-hidden shrink-0 border-b border-slate-100">
+              {/* TOP: Kartu Thumbnail Foto GTK - Bisa di-klik untuk Preview/Lightbox */}
+              <div
+                onClick={() => setPreviewTeacher(teacher)}
+                className="relative aspect-square w-full bg-gradient-to-br from-slate-100 via-slate-200 to-blue-50 overflow-hidden shrink-0 border-b border-slate-100 cursor-pointer"
+                title="Klik untuk melihat foto lebih jelas"
+              >
                 {teacher.photoUrl ? (
                   <img
                     src={teacher.photoUrl}
@@ -203,6 +211,13 @@ export const GTKCarouselSection: React.FC<GTKCarouselSectionProps> = ({ config }
                   </div>
                 )}
 
+                {/* Hover zoom icon indicator */}
+                <div className="absolute inset-0 bg-slate-900/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                  <span className="p-2 rounded-full bg-white/90 text-slate-900 shadow-md transform translate-y-2 group-hover:translate-y-0 transition-transform">
+                    <Maximize2 className="w-4 h-4" />
+                  </span>
+                </div>
+
                 {/* Role Badge Floating on Top of Photo */}
                 <div className="absolute bottom-2.5 left-2.5 right-2.5 flex justify-start">
                   <span className="text-[11px] font-bold px-3 py-1 rounded-xl bg-slate-900/85 backdrop-blur-md text-white border border-white/20 shadow-sm max-w-full truncate">
@@ -215,7 +230,11 @@ export const GTKCarouselSection: React.FC<GTKCarouselSectionProps> = ({ config }
               <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3 bg-white">
                 <div className="space-y-1.5">
                   {/* Nama Lengkap & Gelar */}
-                  <h3 className="font-bold text-slate-900 text-sm sm:text-base leading-snug line-clamp-2 group-hover:text-blue-600 transition-colors">
+                  <h3
+                    onClick={() => setPreviewTeacher(teacher)}
+                    className="font-bold text-slate-900 text-sm sm:text-base leading-snug line-clamp-2 group-hover:text-blue-600 transition-colors cursor-pointer"
+                    title={teacher.name}
+                  >
                     {teacher.name}
                   </h3>
 
@@ -227,12 +246,11 @@ export const GTKCarouselSection: React.FC<GTKCarouselSectionProps> = ({ config }
                     </span>
                   </div>
 
-                  {/* Kata-kata Mutiara / Motto */}
+                  {/* Kata-kata Mutiara / Motto (Tanpa tanda kutip biru besar) */}
                   {teacher.quote && (
                     <div className="pt-2">
-                      <div className="relative bg-slate-50 rounded-xl p-2.5 border border-slate-100 text-xs italic text-slate-600 leading-relaxed group-hover:bg-blue-50/40 group-hover:border-blue-100 transition-colors">
-                        <Quote className="w-3 h-3 text-blue-400 shrink-0 mb-0.5 inline-block mr-1" />
-                        <span className="line-clamp-3">"{teacher.quote}"</span>
+                      <div className="bg-slate-50/90 rounded-xl p-2.5 border border-slate-100 text-xs italic text-slate-600 leading-relaxed group-hover:bg-blue-50/40 group-hover:border-blue-100 transition-colors">
+                        <span className="line-clamp-3 leading-relaxed">"{teacher.quote}"</span>
                       </div>
                     </div>
                   )}
@@ -242,16 +260,24 @@ export const GTKCarouselSection: React.FC<GTKCarouselSectionProps> = ({ config }
                 {(teacher.phone || teacher.email) && (
                   <div className="pt-2.5 border-t border-slate-100 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
                     {teacher.phone && (
-                      <span className="inline-flex items-center gap-1 text-slate-600 font-medium">
+                      <a
+                        href={`https://wa.me/${teacher.phone.replace(/[^0-9]/g, '')}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-slate-600 hover:text-emerald-600 font-medium transition-colors"
+                      >
                         <Phone className="w-3 h-3 text-emerald-600" />
-                        {teacher.phone}
-                      </span>
+                        <span>{teacher.phone}</span>
+                      </a>
                     )}
                     {teacher.email && (
-                      <span className="inline-flex items-center gap-1 text-slate-600 font-medium truncate max-w-full">
+                      <a
+                        href={`mailto:${teacher.email}`}
+                        className="inline-flex items-center gap-1 text-slate-600 hover:text-blue-600 font-medium truncate max-w-full transition-colors"
+                      >
                         <Mail className="w-3 h-3 text-blue-600" />
-                        {teacher.email}
-                      </span>
+                        <span className="truncate">{teacher.email}</span>
+                      </a>
                     )}
                   </div>
                 )}
@@ -261,6 +287,91 @@ export const GTKCarouselSection: React.FC<GTKCarouselSectionProps> = ({ config }
         </div>
 
       </div>
+
+      {/* Lightbox / Foto Preview Popup Modal */}
+      {previewTeacher && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl border border-slate-100 flex flex-col max-h-[90vh]">
+            
+            {/* Modal Close Button */}
+            <button
+              type="button"
+              onClick={() => setPreviewTeacher(null)}
+              className="absolute top-3.5 right-3.5 z-10 w-9 h-9 rounded-full bg-slate-900/70 hover:bg-slate-900 text-white backdrop-blur-md flex items-center justify-center transition-all cursor-pointer shadow-md"
+              title="Tutup Preview"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Big Photo Preview */}
+            <div className="relative aspect-square w-full bg-slate-900 flex items-center justify-center overflow-hidden">
+              {previewTeacher.photoUrl ? (
+                <img
+                  src={previewTeacher.photoUrl}
+                  alt={previewTeacher.name}
+                  className="w-full h-full object-cover object-top"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-700 via-indigo-700 to-slate-900 text-white p-6 text-center">
+                  <User className="w-20 h-20 opacity-30 mb-2" />
+                  <span className="text-4xl font-black">{previewTeacher.name.charAt(0)}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Biodata Info in Lightbox */}
+            <div className="p-5 sm:p-6 space-y-3 overflow-y-auto bg-white">
+              <div>
+                <span className="inline-block text-[11px] font-bold px-3 py-1 rounded-xl bg-blue-50 text-blue-700 border border-blue-100 mb-1.5">
+                  {previewTeacher.role}
+                </span>
+                <h3 className="text-lg font-bold text-slate-900 leading-snug">
+                  {previewTeacher.name}
+                </h3>
+                {previewTeacher.nip && previewTeacher.nip !== '-' && (
+                  <p className="text-xs font-mono text-slate-500 mt-0.5">
+                    NIP / NUPTK: {previewTeacher.nip}
+                  </p>
+                )}
+              </div>
+
+              {previewTeacher.quote && (
+                <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-200/70 text-xs italic text-slate-700 leading-relaxed">
+                  "{previewTeacher.quote}"
+                </div>
+              )}
+
+              {(previewTeacher.phone || previewTeacher.email) && (
+                <div className="pt-2 border-t border-slate-100 flex flex-wrap gap-2 text-xs">
+                  {previewTeacher.phone && (
+                    <a
+                      href={`https://wa.me/${previewTeacher.phone.replace(/[^0-9]/g, '')}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold hover:bg-emerald-100 transition"
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                      <span>{previewTeacher.phone}</span>
+                    </a>
+                  )}
+                  {previewTeacher.email && (
+                    <a
+                      href={`mailto:${previewTeacher.email}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 font-semibold hover:bg-blue-100 transition truncate max-w-full"
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                      <span className="truncate">{previewTeacher.email}</span>
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </section>
   );
 };
