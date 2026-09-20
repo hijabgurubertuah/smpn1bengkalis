@@ -8,6 +8,8 @@ export const DEFAULT_SCHOOL_CONFIG: SchoolConfig = {
     name: '',
     shortName: '',
     tagline: '',
+    portalTitle: '',
+    portalDescription: '',
     npsn: '',
     akreditasi: '',
     logoUrl: 'https://i.ibb.co.com/d44hK88L/logo-smpn-1-bengkalis-kecil.png',

@@ -33,6 +33,7 @@ interface ImageUploadButtonProps {
   label: string;
   value: string;
   onChange: (newUrl: string) => void;
+  onProcessingChange?: (isProcessing: boolean) => void;
   preset?: 'favicon' | 'logo' | 'avatar' | 'banner' | 'post';
   aspectRatio?: 'square' | 'wide' | 'banner';
   layout?: 'vertical' | 'horizontal' | 'auto';
@@ -44,6 +45,7 @@ export const ImageUploadButton: React.FC<ImageUploadButtonProps> = ({
   label,
   value,
   onChange,
+  onProcessingChange,
   preset = 'banner',
   aspectRatio = 'wide',
   layout = 'auto',
@@ -118,6 +120,7 @@ export const ImageUploadButton: React.FC<ImageUploadButtonProps> = ({
     }
 
     setIsProcessing(true);
+    onProcessingChange?.(true);
     setUploadError(null);
     setSuccessInfo(null);
     setProcessingStatus('Mengunggah gambar...');
@@ -137,6 +140,7 @@ export const ImageUploadButton: React.FC<ImageUploadButtonProps> = ({
       setUploadError(`Gagal mengunggah: ${errorMsg}`);
     } finally {
       setIsProcessing(false);
+      onProcessingChange?.(false);
       setProcessingStatus('');
     }
   };
@@ -151,6 +155,7 @@ export const ImageUploadButton: React.FC<ImageUploadButtonProps> = ({
     }
 
     setIsProcessing(true);
+    onProcessingChange?.(true);
     setUploadError(null);
     setSuccessInfo(null);
     setProcessingStatus('Mengompresi gambar ke WebP...');
@@ -164,6 +169,7 @@ export const ImageUploadButton: React.FC<ImageUploadButtonProps> = ({
       setUploadError(`Gagal kompresi: ${errorMsg}`);
     } finally {
       setIsProcessing(false);
+      onProcessingChange?.(false);
       setProcessingStatus('');
     }
   };

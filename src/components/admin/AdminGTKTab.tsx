@@ -424,8 +424,13 @@ export const AdminGTKTab: React.FC<AdminGTKTabProps> = ({ config, onChange }) =>
 
             <DataGTKForm
               initialData={editingItem || undefined}
+              existingGtkList={gtkList}
               onSubmitSuccess={handleSaveTeacherData}
               onCancel={() => {
+                setIsFormModalOpen(false);
+                setEditingItem(null);
+              }}
+              onExit={() => {
                 setIsFormModalOpen(false);
                 setEditingItem(null);
               }}

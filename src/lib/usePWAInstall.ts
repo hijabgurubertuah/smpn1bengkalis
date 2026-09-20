@@ -13,6 +13,13 @@ export function syncPWAManifest(identity: SchoolIdentity) {
 
   const schoolName = identity.name || 'Portal Resmi';
   const shortName = identity.shortName || identity.name || 'Portal';
+  const portalTitle = (identity.portalTitle && identity.portalTitle.trim()) 
+    ? identity.portalTitle.trim() 
+    : (identity.name ? `${identity.name} - Portal Resmi` : 'Portal Resmi');
+  const portalDescription = (identity.portalDescription && identity.portalDescription.trim())
+    ? identity.portalDescription.trim()
+    : (identity.tagline ? identity.tagline.trim() : `Portal Informasi & Layanan Pendidikan Resmi ${schoolName}`);
+
   const DEFAULT_LOGO_URL = 'https://i.ibb.co.com/d44hK88L/logo-smpn-1-bengkalis-kecil.png';
   const rawLogo = identity.logoUrl || '';
   const cleanLogo = (rawLogo && !rawLogo.includes('photo-1594608661623')) ? rawLogo : '';
@@ -23,7 +30,7 @@ export function syncPWAManifest(identity: SchoolIdentity) {
   const faviconUrl = cleanFavicon || cleanLogo || DEFAULT_LOGO_URL;
 
   // 1. Update Document Title
-  document.title = `${schoolName} - Portal Resmi`;
+  document.title = portalTitle;
 
   // 2. Update meta tags
   const appleTitleMeta = document.querySelector('meta[name="apple-mobile-web-app-title"]');
@@ -33,11 +40,27 @@ export function syncPWAManifest(identity: SchoolIdentity) {
 
   const metaDesc = document.querySelector('meta[name="description"]');
   if (metaDesc) {
-    metaDesc.setAttribute(
-      'content',
-      identity.tagline || `Website resmi dan portal informasi ${schoolName}`
-    );
+    metaDesc.setAttribute('content', portalDescription);
   }
+
+  // Update OpenGraph & Twitter Social Share Cards
+  const ogTitle = document.querySelector('meta[property="og:title"]');
+  if (ogTitle) ogTitle.setAttribute('content', portalTitle);
+
+  const ogDesc = document.querySelector('meta[property="og:description"]');
+  if (ogDesc) ogDesc.setAttribute('content', portalDescription);
+
+  const ogImage = document.querySelector('meta[property="og:image"]');
+  if (ogImage) ogImage.setAttribute('content', logoUrl);
+
+  const twTitle = document.querySelector('meta[name="twitter:title"]');
+  if (twTitle) twTitle.setAttribute('content', portalTitle);
+
+  const twDesc = document.querySelector('meta[name="twitter:description"]');
+  if (twDesc) twDesc.setAttribute('content', portalDescription);
+
+  const twImage = document.querySelector('meta[name="twitter:image"]');
+  if (twImage) twImage.setAttribute('content', logoUrl);
 
   // 3. Update Favicon & Apple Touch Icon
   try {

@@ -64,6 +64,8 @@ export interface SchoolIdentity {
   name: string;
   shortName?: string;
   tagline: string;
+  portalTitle?: string; // Judul Portal / Meta Title (Dapat diedit di portal pengaturan)
+  portalDescription?: string; // Deskripsi Portal / Meta Description (Dapat diedit di portal pengaturan)
   npsn: string;
   akreditasi: string;
   logoUrl: string;
