@@ -46,6 +46,8 @@ import { AdminLoginModal } from './components/admin/AdminLoginModal';
 import { MobileBottomNav } from './components/public/MobileBottomNav';
 import { NewsDetailModal } from './components/public/NewsDetailModal';
 import { RotateYLoadingScreen } from './components/common/RotateYLoadingScreen';
+import { StandaloneGTKFormPage } from './components/common/datagtk';
+import { GTKCarouselSection } from './components/public/GTKCarouselSection';
 import { ShieldCheck, Sparkles, CheckCircle2, RefreshCw, School } from 'lucide-react';
 import { syncPWAManifest } from './lib/usePWAInstall';
 import { openShopeeLink, DEFAULT_SHOPEE_AFFILIATE_URL, initShopeeLinkInterceptors, isMobileDevice } from './lib/shopeeHelper';
@@ -465,6 +467,26 @@ export default function App() {
     );
   }
 
+  // Check if current URL is the isolated shareable GTK form link
+  const isGTKFormRoute =
+    typeof window !== 'undefined' &&
+    (new URLSearchParams(window.location.search).get('form') === 'gtk' ||
+      new URLSearchParams(window.location.search).get('form') === 'datagtk' ||
+      window.location.hash === '#datagtk');
+
+  if (isGTKFormRoute) {
+    return (
+      <>
+        <RotateYLoadingScreen
+          isVisible={isScreenLoading}
+          schoolName={config.identity.name || 'SMPN 1 BENGKALIS'}
+          schoolLogo={config.identity.logoUrl}
+        />
+        <StandaloneGTKFormPage config={config} />
+      </>
+    );
+  }
+
   // Admin CMS Mode View
   if (isAdminMode) {
     return (
@@ -579,6 +601,11 @@ export default function App() {
           isInitialSyncing={isInitialSyncing}
           onSelectArticle={setSelectedArticle}
         />
+      )}
+
+      {/* Guru & Tenaga Kependidikan (GTK) Carousel */}
+      {layoutSections.showGTK !== false && (
+        <GTKCarouselSection config={config} />
       )}
 
       {/* Agenda & Kalender Kegiatan */}

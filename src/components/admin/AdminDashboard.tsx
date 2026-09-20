@@ -30,6 +30,7 @@ import {
   Volume2,
   Settings,
   MessageSquare,
+  Users,
 } from 'lucide-react';
 import { AdminIdentityTab } from './AdminIdentityTab';
 import { AdminBannerTab } from './AdminBannerTab';
@@ -48,6 +49,7 @@ import { AdminFooterTab } from './AdminFooterTab';
 import { AdminSyncTab } from './AdminSyncTab';
 import { AdminGoogleAppsScriptTab } from './AdminGoogleAppsScriptTab';
 import { AdminUsersTab } from './AdminUsersTab';
+import { AdminGTKTab } from './AdminGTKTab';
 import {
   saveSchoolTabConfig,
   syncAdminWithFirebaseIfDifferent,
@@ -76,6 +78,7 @@ export type AdminTab =
   | 'ppdb'
   | 'posts'
   | 'comments'
+  | 'gtk'
   | 'agenda'
   | 'facilities'
   | 'layout'
@@ -229,6 +232,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Kategori 1: Konten Utama & Informasi Sekolah
   const contentTabs: Array<{ id: AdminTab; label: string; icon: React.ReactNode }> = [
     { id: 'posts', label: 'Postingan Berita', icon: <FileText className="w-4 h-4" /> },
+    { id: 'gtk', label: 'Data GTK (Guru & Staf)', icon: <Users className="w-4 h-4 text-blue-500" /> },
     { id: 'comments', label: 'Pengelola Komentar', icon: <MessageSquare className="w-4 h-4" /> },
     { id: 'agenda', label: 'Agenda & Jadwal', icon: <Calendar className="w-4 h-4" /> },
     { id: 'ppdb', label: 'PPDB Online', icon: <GraduationCap className="w-4 h-4" /> },
@@ -947,6 +951,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           {activeTab === 'comments' && (
             <AdminCommentsTab articles={articles} />
+          )}
+
+          {activeTab === 'gtk' && (
+            <AdminGTKTab config={config} onChange={handleConfigUpdate} />
           )}
 
           {activeTab === 'agenda' && (

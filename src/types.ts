@@ -154,6 +154,22 @@ export interface LayoutSections {
   showMapEmbed: boolean;
   showPublicComments?: boolean;
   showVisiMisi?: boolean;
+  showGTK?: boolean;
+}
+
+export interface GTKItem {
+  id: string;
+  name: string; // Nama Lengkap beserta gelar
+  nip: string; // NIP / NUPTK / Identitas
+  role: string; // Tugas yang di Ampu / Mata Pelajaran / Jabatan
+  quote: string; // Kata-kata Mutiara / Motto
+  photoUrl: string; // Foto Profil Guru
+  isVisible: boolean; // Apakah ditampilkan di Carousel publik
+  order?: number;
+  phone?: string;
+  email?: string;
+  submittedAt?: string;
+  submittedByPublic?: boolean;
 }
 
 export interface CommentItem {
@@ -302,6 +318,9 @@ export interface SchoolConfig {
   misi?: string;
   visiMisiTitle?: string;
   visiMisiSubtitle?: string;
+  gtkList?: GTKItem[];
+  gtkSectionTitle?: string;
+  gtkSectionSubtitle?: string;
 }
 
 export interface NewsArticle {

@@ -13,7 +13,7 @@ import {
   onSnapshot,
   Firestore,
 } from 'firebase/firestore';
-import { SchoolConfig, NewsArticle } from '../types';
+import { SchoolConfig, NewsArticle, GTKItem } from '../types';
 import { DEFAULT_SCHOOL_CONFIG, DEFAULT_NEWS_ARTICLES } from './defaultData';
 import { getOfflineItem, setOfflineItem, clearOfflineStorage } from './offlineStorage';
 import { saveStoredAppsScriptConfig } from './googleAppsScript';
@@ -125,6 +125,9 @@ export function normalizeSchoolConfig(raw: Partial<SchoolConfig> | null | undefi
     misi: sanitizedRaw.misi !== undefined ? sanitizedRaw.misi : DEFAULT_SCHOOL_CONFIG.misi,
     visiMisiTitle: sanitizedRaw.visiMisiTitle !== undefined ? sanitizedRaw.visiMisiTitle : DEFAULT_SCHOOL_CONFIG.visiMisiTitle,
     visiMisiSubtitle: sanitizedRaw.visiMisiSubtitle !== undefined ? sanitizedRaw.visiMisiSubtitle : DEFAULT_SCHOOL_CONFIG.visiMisiSubtitle,
+    gtkList: Array.isArray(sanitizedRaw.gtkList) ? sanitizedRaw.gtkList : (DEFAULT_SCHOOL_CONFIG.gtkList || []),
+    gtkSectionTitle: sanitizedRaw.gtkSectionTitle !== undefined ? sanitizedRaw.gtkSectionTitle : DEFAULT_SCHOOL_CONFIG.gtkSectionTitle,
+    gtkSectionSubtitle: sanitizedRaw.gtkSectionSubtitle !== undefined ? sanitizedRaw.gtkSectionSubtitle : DEFAULT_SCHOOL_CONFIG.gtkSectionSubtitle,
   };
 }
 
@@ -596,6 +599,14 @@ export async function saveSchoolTabConfig(tab: string, config: SchoolConfig): Pr
     case 'posts':
       tabPayload = {
         newsCategories: config.newsCategories,
+      };
+      break;
+    case 'gtk':
+      tabPayload = {
+        gtkList: config.gtkList || [],
+        gtkSectionTitle: config.gtkSectionTitle,
+        gtkSectionSubtitle: config.gtkSectionSubtitle,
+        layoutSections: config.layoutSections,
       };
       break;
     default:
@@ -1473,5 +1484,68 @@ export function subscribeToCloudArticles(
     return () => {};
   }
 }
+
+/**
+ * Public Form Submission: Save / update GTK data directly from the shareable public link.
+ * Automatically synchronizes with local storage and cloud Firestore without requiring admin login.
+ */
+export async function saveGTKSubmission(item: GTKItem): Promise<{ success: boolean; message: string }> {
+  try {
+    const currentConfig = await loadSchoolConfig();
+    const existingList: GTKItem[] = Array.isArray(currentConfig.gtkList) ? [...currentConfig.gtkList] : [];
+    
+    // Check if entry already exists (by exact ID or exact NIP)
+    const existingIndex = existingList.findIndex(
+      (g) => (item.id && g.id === item.id) || (item.nip && item.nip.trim() !== '-' && item.nip.trim() !== '' && g.nip === item.nip)
+    );
+
+    const nowIso = new Date().toISOString();
+    const submissionItem: GTKItem = {
+      ...item,
+      id: item.id || `gtk_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      isVisible: item.isVisible !== undefined ? item.isVisible : true,
+      submittedByPublic: true,
+      submittedAt: item.submittedAt || nowIso,
+    };
+
+    if (existingIndex >= 0) {
+      existingList[existingIndex] = {
+        ...existingList[existingIndex],
+        ...submissionItem,
+      };
+    } else {
+      existingList.unshift(submissionItem);
+    }
+
+    const updatedConfig: SchoolConfig = {
+      ...currentConfig,
+      gtkList: existingList,
+    };
+
+    // Save to local cache first for instant feedback
+    await saveLocalDraftConfig(updatedConfig);
+    const currentArticles = (await getCachedNewsArticles('public')) || DEFAULT_NEWS_ARTICLES;
+    await saveToPublicCache(updatedConfig, currentArticles);
+
+    // Save to Firestore cloud
+    try {
+      await saveSchoolTabConfig('gtk', updatedConfig);
+    } catch (e) {
+      console.info('GTK cloud sync pending offline:', e);
+    }
+
+    return {
+      success: true,
+      message: 'Biodata Anda berhasil dikirim dan tersimpan di sistem!',
+    };
+  } catch (err: unknown) {
+    console.error('Error submitting GTK biodata:', err);
+    return {
+      success: false,
+      message: 'Terjadi kendala saat menyimpan biodata. Silakan coba kembali.',
+    };
+  }
+}
+
 
 

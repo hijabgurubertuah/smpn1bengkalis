@@ -74,6 +74,7 @@ export const AdminLayoutTab: React.FC<AdminLayoutTabProps> = ({ config, onChange
     { key: 'showAgenda', title: 'Agenda & Kegiatan' },
     { key: 'showFacilities', title: 'Fasilitas Instansi' },
     { key: 'showExtracurriculars', title: 'Ekstrakurikuler' },
+    { key: 'showGTK', title: 'Guru & Tenaga Kependidikan (GTK)' },
     { key: 'showVideoEmbed', title: 'Video Profil (YouTube)' },
     { key: 'showMapEmbed', title: 'Peta Lokasi (Google Maps)' },
     { key: 'showPublicComments', title: 'Komentar & Aspirasi Publik (Bawah Halaman)' },
