@@ -126,7 +126,6 @@ const SingleNewsModalView: React.FC<SingleNewsModalViewProps> = ({
         try {
           await navigator.share({
             title: article.title,
-            text: article.title,
             url: shareUrl,
           });
           setCopiedNotice(true);

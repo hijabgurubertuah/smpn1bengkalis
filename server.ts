@@ -9,7 +9,7 @@ const FIREBASE_DATABASE_ID = "ai-studio-websmpn1bengkali-5e1acd1a-2624-4c02-88cd
 const FIREBASE_API_KEY = "AIzaSyDt7N52r6H-DzarY-7UlcwlIfkQ0nUu6Q4";
 
 /**
- * Transforms Google Drive URLs or image links into lightweight 1200x630 OG CDN thumbnails (<100KB)
+ * Transforms Google Drive URLs into lightweight 1200x630 OG CDN thumbnails (<100KB)
  */
 function getOptimizedOgImageUrl(url: string | undefined | null): string {
   const fallbackLogo = "https://i.ibb.co.com/d44hK88L/logo-smpn-1-bengkalis-kecil.png";
@@ -31,103 +31,44 @@ function getOptimizedOgImageUrl(url: string | undefined | null): string {
 /**
  * Fetch article details directly from Firestore REST API for Server-Side OpenGraph rendering
  */
-async function fetchArticleForOg(postId: string): Promise<{ title?: string; coverImage?: string; summary?: string } | null> {
-  if (!postId || typeof postId !== "string" || !postId.trim()) return null;
-  const cleanId = postId.trim();
-
+async function fetchArticleForOg(postId: string): Promise<{ title?: string; coverImage?: string } | null> {
   try {
-    const endpoint = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/${FIREBASE_DATABASE_ID}/documents/news_articles/${cleanId}?key=${FIREBASE_API_KEY}`;
+    const endpoint = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/${FIREBASE_DATABASE_ID}/documents/news_articles/${postId}?key=${FIREBASE_API_KEY}`;
     const response = await fetch(endpoint, { headers: { Accept: "application/json" } });
-    
-    if (response.ok) {
-      const data = await response.json();
-      const fields = data.fields || {};
-
-      const title = fields.title?.stringValue;
-      const coverImage =
-        fields.coverImage?.stringValue ||
-        fields.imageUrl?.stringValue ||
-        fields.photoUrl?.stringValue ||
-        fields.image?.stringValue;
-
-      const rawSummary =
-        fields.excerpt?.stringValue ||
-        fields.summary?.stringValue ||
-        fields.content?.stringValue ||
-        "";
-
-      const summary = rawSummary.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-
-      if (title || coverImage) {
-        return {
-          title,
-          coverImage,
-          summary: summary || "Portal Resmi SMP Negeri 1 Bengkalis",
-        };
-      }
-    }
-  } catch (err) {
-    console.error("Error fetching OG metadata for post:", err);
+    if (!response.ok) return null;
+    const data = await response.json();
+    const fields = data.fields || {};
+    return {
+      title: fields.title?.stringValue,
+      coverImage: fields.coverImage?.stringValue,
+    };
+  } catch {
+    return null;
   }
-
-  return null;
 }
 
 /**
  * Inject dynamic OpenGraph meta tags into static index.html
  */
-function injectOgMetaTags(
-  html: string,
-  article: { title?: string; coverImage?: string; summary?: string },
-  fullUrl: string
-): string {
-  const ogTitle = article.title ? article.title.trim() : "Website SMP Negeri 1 Bengkalis";
-  const docTitle = article.title ? `${article.title.trim()} - SMP Negeri 1 Bengkalis` : "Website SMP Negeri 1 Bengkalis";
+function injectOgMetaTags(html: string, article: { title?: string; coverImage?: string }, fullUrl: string): string {
+  const title = article.title ? `${article.title} - SMP Negeri 1 Bengkalis` : "Website SMP Negeri 1 Bengkalis";
+  const ogTitle = article.title || "Website SMP Negeri 1 Bengkalis";
   const ogImage = getOptimizedOgImageUrl(article.coverImage);
-  const description = article.summary && article.summary.trim()
-    ? article.summary.trim().substring(0, 160)
-    : "Portal Resmi SMP Negeri 1 Bengkalis";
+  const description = "Portal Resmi SMP Negeri 1 Bengkalis";
 
   let result = html;
+  result = result.replace(/<title>.*?<\/title>/gi, `<title>${title}</title>`);
+  result = result.replace(/<meta property="og:title" content=".*?"\s*\/?>/gi, `<meta property="og:title" content="${ogTitle}" />`);
+  result = result.replace(/<meta property="og:description" content=".*?"\s*\/?>/gi, `<meta property="og:description" content="${description}" />`);
+  result = result.replace(/<meta property="og:image" content=".*?"\s*\/?>/gi, `<meta property="og:image" content="${ogImage}" />`);
+  result = result.replace(/<meta name="twitter:title" content=".*?"\s*\/?>/gi, `<meta name="twitter:title" content="${ogTitle}" />`);
+  result = result.replace(/<meta name="twitter:description" content=".*?"\s*\/?>/gi, `<meta name="twitter:description" content="${description}" />`);
+  result = result.replace(/<meta name="twitter:image" content=".*?"\s*\/?>/gi, `<meta name="twitter:image" content="${ogImage}" />`);
 
-  // 1. Update <title>
-  result = result.replace(/<title>.*?<\/title>/gi, `<title>${docTitle}</title>`);
-
-  // Helper to update or inject a meta tag cleanly before </head>
-  const setMetaTag = (attrName: string, attrVal: string, contentVal: string) => {
-    const regex = new RegExp(`<meta\\s+${attrName}="${attrVal}"\\s+content=".*?"\\s*\\/?>`, "gi");
-    if (regex.test(result)) {
-      result = result.replace(regex, `<meta ${attrName}="${attrVal}" content="${contentVal}" />`);
-    } else {
-      result = result.replace("</head>", `  <meta ${attrName}="${attrVal}" content="${contentVal}" />\n</head>`);
-    }
-  };
-
-  // OpenGraph standard meta tags for social previews (WhatsApp, Facebook, Telegram, LinkedIn, Discord)
-  setMetaTag("property", "og:title", ogTitle);
-  setMetaTag("property", "og:description", description);
-  setMetaTag("property", "og:image", ogImage);
-  setMetaTag("property", "og:image:secure_url", ogImage);
-  setMetaTag("property", "og:image:type", "image/jpeg");
-  setMetaTag("property", "og:image:width", "1200");
-  setMetaTag("property", "og:image:height", "630");
-  setMetaTag("property", "og:url", fullUrl);
-  setMetaTag("property", "og:type", "article");
-  setMetaTag("property", "og:site_name", "SMP Negeri 1 Bengkalis");
-
-  // Twitter / X card tags
-  setMetaTag("name", "twitter:card", "summary_large_image");
-  setMetaTag("name", "twitter:title", ogTitle);
-  setMetaTag("name", "twitter:description", description);
-  setMetaTag("name", "twitter:image", ogImage);
-
-  // General SEO description & link thumbnail
-  setMetaTag("name", "description", description);
-
-  if (result.includes('<link rel="image_src"')) {
-    result = result.replace(/<link rel="image_src"\s+href=".*?"\s*\/?>/gi, `<link rel="image_src" href="${ogImage}" />`);
+  if (result.includes('<meta property="og:url"')) {
+    result = result.replace(/<meta property="og:url" content=".*?"\s*\/?>/gi, `<meta property="og:url" content="${fullUrl}" />`);
   } else {
-    result = result.replace("</head>", `  <link rel="image_src" href="${ogImage}" />\n</head>`);
+    result = result.replace("</head>", `<meta property="og:url" content="${fullUrl}" />\n</head>`);
   }
 
   return result;
@@ -142,30 +83,15 @@ async function startServer() {
     res.json({ status: "ok" });
   });
 
-  // Dynamic OpenGraph handler for HTML requests with ?post=POST_ID or /post/:id
+  // Dynamic OpenGraph handler for HTML requests with ?post=POST_ID
   app.use(async (req, res, next) => {
+    const postId = req.query.post ? String(req.query.post) : null;
     const isHtmlRequest =
       req.method === "GET" &&
       !req.path.startsWith("/api/") &&
       !req.path.match(/\.(js|css|json|png|jpg|jpeg|gif|ico|svg|woff2?)$/i);
 
-    if (!isHtmlRequest) {
-      return next();
-    }
-
-    // Extract post ID from query params or path
-    let postId = (req.query.post || req.query.p || req.query.article || req.query.id)
-      ? String(req.query.post || req.query.p || req.query.article || req.query.id).trim()
-      : null;
-
-    if (!postId) {
-      const pathMatch = req.path.match(/^\/(?:post|berita|artikel|news)\/([a-zA-Z0-9_-]+)/i);
-      if (pathMatch && pathMatch[1]) {
-        postId = pathMatch[1];
-      }
-    }
-
-    if (postId) {
+    if (postId && isHtmlRequest) {
       try {
         const article = await fetchArticleForOg(postId);
         if (article && (article.title || article.coverImage)) {
@@ -176,12 +102,8 @@ async function startServer() {
 
           if (fs.existsSync(indexPath)) {
             const rawHtml = fs.readFileSync(indexPath, "utf-8");
-            const proto = req.get("x-forwarded-proto") || req.protocol || "https";
-            const host = req.get("x-forwarded-host") || req.get("host");
-            const fullUrl = `${proto}://${host}${req.originalUrl}`;
+            const fullUrl = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
             const transformedHtml = injectOgMetaTags(rawHtml, article, fullUrl);
-
-            res.setHeader("Content-Type", "text/html; charset=utf-8");
             return res.status(200).send(transformedHtml);
           }
         }
