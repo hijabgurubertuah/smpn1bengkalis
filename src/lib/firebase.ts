@@ -26,13 +26,13 @@ try {
 }
 
 const FIREBASE_CONFIG = {
-  projectId: 'lateral-hope-tthv3',
-  appId: '1:86435826094:web:9e6bcc0bd6cd12d35ae03f',
-  apiKey: 'AIzaSyDt7N52r6H-DzarY-7UlcwlIfkQ0nUu6Q4',
-  authDomain: 'lateral-hope-tthv3.firebaseapp.com',
-  firestoreDatabaseId: 'ai-studio-websmpn1bengkali-5e1acd1a-2624-4c02-88cd-1246d9058afb',
-  storageBucket: 'lateral-hope-tthv3.firebasestorage.app',
-  messagingSenderId: '86435826094',
+  projectId: 'gen-lang-client-0999699449',
+  appId: '1:319360539506:web:894f0f9c3612848f8a9beb',
+  apiKey: 'AIzaSyCOZgLPjDQ61WyWptoYS1tVH_zZLsNVeFQ',
+  authDomain: 'gen-lang-client-0999699449.firebaseapp.com',
+  firestoreDatabaseId: 'ai-studio-e8590637-9651-4312-9d0c-eb416143de72',
+  storageBucket: 'gen-lang-client-0999699449.firebasestorage.app',
+  messagingSenderId: '319360539506',
 };
 
 // Dual Cache Keys: Separate storage for Public visitors vs Admin authenticated editors
@@ -800,54 +800,6 @@ export async function loadNewsArticles(): Promise<NewsArticle[]> {
   const cached = await getCachedNewsArticles();
   if (cached && Array.isArray(cached)) return cached;
   return DEFAULT_NEWS_ARTICLES;
-}
-
-/**
- * Fetch a single article by its ID or Slug
- */
-export async function fetchArticleByIdOrSlug(idOrSlug: string): Promise<NewsArticle | null> {
-  if (!idOrSlug) return null;
-  const cleanId = idOrSlug.trim();
-
-  // 1. Check local cached articles first
-  try {
-    const cachedArticles = (await getCachedNewsArticles()) || DEFAULT_NEWS_ARTICLES;
-    const found = cachedArticles.find(
-      (a) =>
-        a.id === cleanId ||
-        (a.slug && a.slug.toLowerCase() === cleanId.toLowerCase()) ||
-        a.id.toLowerCase() === cleanId.toLowerCase()
-    );
-    if (found) return found;
-  } catch {}
-
-  // 2. Fetch directly from Firestore by document ID
-  if (db && (typeof navigator === 'undefined' || navigator.onLine)) {
-    try {
-      const docRef = doc(db, 'news_articles', cleanId);
-      const snap = await withTimeout(getDoc(docRef), 3500);
-      if (snap.exists()) {
-        return { id: snap.id, ...snap.data() } as NewsArticle;
-      }
-    } catch {}
-
-    // 3. If not matched by doc ID, search by slug
-    try {
-      const colRef = collection(db, 'news_articles');
-      const snap = await withTimeout(getDocs(colRef), 3500);
-      for (const docSnap of snap.docs) {
-        const data = docSnap.data();
-        if (
-          docSnap.id === cleanId ||
-          (data.slug && String(data.slug).toLowerCase() === cleanId.toLowerCase())
-        ) {
-          return { id: docSnap.id, ...data } as NewsArticle;
-        }
-      }
-    } catch {}
-  }
-
-  return null;
 }
 
 /**

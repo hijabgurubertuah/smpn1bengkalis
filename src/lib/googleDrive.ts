@@ -9,13 +9,13 @@ import {
 } from 'firebase/auth';
 
 const FIREBASE_CONFIG = {
-  projectId: 'lateral-hope-tthv3',
-  appId: '1:86435826094:web:9e6bcc0bd6cd12d35ae03f',
-  apiKey: 'AIzaSyDt7N52r6H-DzarY-7UlcwlIfkQ0nUu6Q4',
-  authDomain: 'lateral-hope-tthv3.firebaseapp.com',
-  firestoreDatabaseId: 'ai-studio-websmpn1bengkali-5e1acd1a-2624-4c02-88cd-1246d9058afb',
-  storageBucket: 'lateral-hope-tthv3.firebasestorage.app',
-  messagingSenderId: '86435826094',
+  projectId: 'gen-lang-client-0999699449',
+  appId: '1:319360539506:web:894f0f9c3612848f8a9beb',
+  apiKey: 'AIzaSyCOZgLPjDQ61WyWptoYS1tVH_zZLsNVeFQ',
+  authDomain: 'gen-lang-client-0999699449.firebaseapp.com',
+  firestoreDatabaseId: 'ai-studio-e8590637-9651-4312-9d0c-eb416143de72',
+  storageBucket: 'gen-lang-client-0999699449.firebasestorage.app',
+  messagingSenderId: '319360539506',
 };
 
 let app: FirebaseApp;
