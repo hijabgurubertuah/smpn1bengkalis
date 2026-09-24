@@ -31,10 +31,25 @@ function getOptimizedOgImageUrl(url: string | undefined | null): string {
 /**
  * Fetch article details directly from Firestore REST API for Server-Side OpenGraph rendering
  */
-async function fetchArticleForOg(postId: string): Promise<{ title?: string; coverImage?: string; summary?: string } | null> {
-  if (!postId || typeof postId !== "string" || !postId.trim()) return null;
+async function fetchArticleForOg(
+  postId: string,
+  queryTitle?: string | null,
+  queryImg?: string | null
+): Promise<{ title?: string; coverImage?: string; summary?: string } | null> {
+  if (!postId || typeof postId !== "string" || !postId.trim()) {
+    if (queryTitle && queryTitle.trim()) {
+      return {
+        title: queryTitle.trim(),
+        coverImage: queryImg ? queryImg.trim() : undefined,
+        summary: "Portal Resmi SMP Negeri 1 Bengkalis",
+      };
+    }
+    return null;
+  }
+
   const cleanId = postId.trim();
 
+  // 1. Check news_articles/{cleanId} in Firestore
   try {
     const endpoint = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/${FIREBASE_DATABASE_ID}/documents/news_articles/${cleanId}?key=${FIREBASE_API_KEY}`;
     const response = await fetch(endpoint, { headers: { Accept: "application/json" } });
@@ -60,14 +75,23 @@ async function fetchArticleForOg(postId: string): Promise<{ title?: string; cove
 
       if (title || coverImage) {
         return {
-          title,
-          coverImage,
+          title: title || (queryTitle ? queryTitle.trim() : undefined),
+          coverImage: coverImage || (queryImg ? queryImg.trim() : undefined),
           summary: summary || "Portal Resmi SMP Negeri 1 Bengkalis",
         };
       }
     }
   } catch (err) {
     console.error("Error fetching OG metadata for post:", err);
+  }
+
+  // 2. Fallback to query parameter title and image if Firestore document is not found or empty
+  if (queryTitle && queryTitle.trim()) {
+    return {
+      title: queryTitle.trim(),
+      coverImage: queryImg ? queryImg.trim() : undefined,
+      summary: "Portal Resmi SMP Negeri 1 Bengkalis",
+    };
   }
 
   return null;
@@ -165,9 +189,13 @@ async function startServer() {
       }
     }
 
-    if (postId) {
+    // Extract query parameter title and image as fallbacks
+    const queryTitle = (req.query.t || req.query.title) ? String(req.query.t || req.query.title) : null;
+    const queryImg = (req.query.img || req.query.image) ? String(req.query.img || req.query.image) : null;
+
+    if (postId || queryTitle) {
       try {
-        const article = await fetchArticleForOg(postId);
+        const article = await fetchArticleForOg(postId || "", queryTitle, queryImg);
         if (article && (article.title || article.coverImage)) {
           const indexPath =
             process.env.NODE_ENV === "production"
