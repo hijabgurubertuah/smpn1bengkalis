@@ -14,6 +14,7 @@ import {
   saveNewsArticle,
   saveNewsArticleLocally,
   deleteNewsArticle,
+  fetchArticleByIdOrSlug,
   fetchAndSyncLatestData,
   subscribeToCloudConfig,
   subscribeToCloudArticles,
@@ -177,31 +178,85 @@ export default function App() {
     }
   }, [isAdminMode]);
 
-  // Auto-open article from URL parameter or popstate (?post=... or ?berita=...)
+  // Auto-open article from URL permalink (/berita/:idOrSlug) or query parameter (?post=... or ?berita=...)
   useEffect(() => {
-    if (!articles || articles.length === 0) return;
-
-    const checkUrlForPost = () => {
+    const parseUrlForPostId = (): string | null => {
       try {
+        const pathname = window.location.pathname;
+        const match = pathname.match(/^\/berita\/([^/?#]+)/i);
+        if (match && match[1]) {
+          return decodeURIComponent(match[1]);
+        }
         const params = new URLSearchParams(window.location.search);
-        const postId = params.get('post') || params.get('berita') || params.get('id');
-        if (postId) {
+        const qPost = params.get('post') || params.get('berita') || params.get('id');
+        if (qPost) return qPost;
+      } catch {}
+      return null;
+    };
+
+    const targetPostId = parseUrlForPostId();
+    if (!targetPostId) return;
+
+    // 1. Check in already loaded articles
+    const found = articles.find(
+      (a) =>
+        a.id === targetPostId ||
+        (a.slug && a.slug.toLowerCase() === targetPostId.toLowerCase()) ||
+        a.id.toLowerCase() === targetPostId.toLowerCase()
+    );
+
+    if (found) {
+      if (!selectedArticle || selectedArticle.id !== found.id) {
+        setSelectedArticle(found);
+      }
+    } else {
+      // 2. Fetch directly from Firestore / offline storage if not in list yet
+      let isCancelled = false;
+      fetchArticleByIdOrSlug(targetPostId).then((fetched) => {
+        if (!isCancelled && fetched) {
+          setSelectedArticle(fetched);
+          setArticles((prev) => (prev.some((a) => a.id === fetched.id) ? prev : [fetched, ...prev]));
+        }
+      });
+      return () => {
+        isCancelled = true;
+      };
+    }
+  }, [articles, selectedArticle]);
+
+  // Handle browser back and forward button navigation
+  useEffect(() => {
+    const handlePopState = () => {
+      try {
+        const pathname = window.location.pathname;
+        const match = pathname.match(/^\/berita\/([^/?#]+)/i);
+        if (match && match[1]) {
+          const targetId = decodeURIComponent(match[1]);
           const found = articles.find(
             (a) =>
-              a.id === postId ||
-              (a.slug && a.slug.toLowerCase() === postId.toLowerCase()) ||
-              String(a.id).toLowerCase() === postId.toLowerCase()
+              a.id === targetId ||
+              (a.slug && a.slug.toLowerCase() === targetId.toLowerCase()) ||
+              a.id.toLowerCase() === targetId.toLowerCase()
           );
           if (found) {
             setSelectedArticle(found);
+          } else {
+            fetchArticleByIdOrSlug(targetId).then((fetched) => {
+              if (fetched) {
+                setSelectedArticle(fetched);
+                setArticles((prev) => (prev.some((a) => a.id === fetched.id) ? prev : [fetched, ...prev]));
+              }
+            });
           }
+        } else {
+          // If navigated back to home or other non-berita route
+          setSelectedArticle(null);
         }
       } catch {}
     };
 
-    checkUrlForPost();
-    window.addEventListener('popstate', checkUrlForPost);
-    return () => window.removeEventListener('popstate', checkUrlForPost);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, [articles]);
 
   // Initialize data: Fast render from offline partition, followed immediately by live Firebase sync and realtime subscription

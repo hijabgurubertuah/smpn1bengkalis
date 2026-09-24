@@ -1,69 +1,123 @@
-import React, { useEffect, useRef, useLayoutEffect } from 'react';
+import React, { useLayoutEffect, useEffect, useRef, useCallback } from 'react';
 
-export interface AutoResizeTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+interface AutoResizeTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   minRows?: number;
   maxRows?: number;
 }
 
-/**
- * Auto-expanding Textarea component.
- * Automatically wraps words down without horizontal scrolling and increases its
- * vertical height dynamically as the user types or pastes long text.
- */
 export const AutoResizeTextarea: React.FC<AutoResizeTextareaProps> = ({
-  minRows = 2,
-  maxRows,
   value,
+  defaultValue,
   onChange,
+  onInput,
+  rows = 1,
+  minRows = 1,
+  maxRows,
   className = '',
-  rows,
+  placeholder,
   ...props
 }) => {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const lastWidthRef = useRef<number>(-1);
 
-  const adjustHeight = () => {
+  const adjustHeight = useCallback(() => {
     const el = textareaRef.current;
     if (!el) return;
-    // Reset height momentarily to measure actual scrollHeight
+
+    // If element is not in DOM or not displayed at all, don't break
+    if (el.offsetWidth === 0 && el.offsetHeight === 0 && el.clientWidth === 0) {
+      return;
+    }
+
+    // Reset height to 'auto' to recalculate true scrollHeight based on current content & width
     el.style.height = 'auto';
-    const computedStyle = window.getComputedStyle(el);
-    const lineHeight = parseFloat(computedStyle.lineHeight) || 20;
-    const paddingTop = parseFloat(computedStyle.paddingTop) || 10;
-    const paddingBottom = parseFloat(computedStyle.paddingBottom) || 10;
-    
-    const minHeight = (minRows || 1) * lineHeight + paddingTop + paddingBottom;
-    const maxHeight = maxRows ? maxRows * lineHeight + paddingTop + paddingBottom : Infinity;
-    
-    const targetHeight = Math.min(Math.max(el.scrollHeight, minHeight), maxHeight);
-    el.style.height = `${targetHeight}px`;
-    el.style.overflowY = el.scrollHeight > maxHeight ? 'auto' : 'hidden';
-  };
 
-  useLayoutEffect(() => {
-    adjustHeight();
-  }, [value]);
+    // Account for box-sizing: border-box borders in Tailwind
+    let extraBorder = 0;
+    try {
+      const computed = window.getComputedStyle(el);
+      if (computed.boxSizing === 'border-box') {
+        const borderTop = parseFloat(computed.borderTopWidth) || 0;
+        const borderBottom = parseFloat(computed.borderBottomWidth) || 0;
+        extraBorder = borderTop + borderBottom;
+      }
+    } catch {
+      // Fallback if window is unavailable
+    }
 
-  useEffect(() => {
-    const handleResize = () => adjustHeight();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const calculatedHeight = el.scrollHeight + extraBorder;
+    if (calculatedHeight > 0) {
+      el.style.height = `${calculatedHeight}px`;
+    }
   }, []);
 
-  const defaultClasses = 'w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none bg-white text-slate-800 leading-relaxed';
-  const combinedClasses = className.includes('border') || className.includes('px-') || className.includes('p-')
-    ? `w-full resize-none break-words whitespace-pre-wrap ${className}`
-    : `${defaultClasses} resize-none break-words whitespace-pre-wrap ${className}`;
+  // 1. Synchronous layout adjustment right after DOM mutation
+  useLayoutEffect(() => {
+    adjustHeight();
+  }, [value, defaultValue, adjustHeight]);
+
+  // 2. Asynchronous frames and timeouts for modals, tab animations, and initial render
+  useEffect(() => {
+    adjustHeight();
+
+    const rafId = requestAnimationFrame(() => {
+      adjustHeight();
+    });
+
+    const timer50 = setTimeout(adjustHeight, 50);
+    const timer150 = setTimeout(adjustHeight, 150);
+    const timer300 = setTimeout(adjustHeight, 300);
+
+    // If web fonts load later and change text dimensions
+    if (typeof document !== 'undefined' && document.fonts?.ready) {
+      document.fonts.ready.then(() => {
+        adjustHeight();
+      }).catch(() => {});
+    }
+
+    // 3. ResizeObserver: Trigger whenever container width changes (e.g. modal opens, screen rotates)
+    const el = textareaRef.current;
+    let observer: ResizeObserver | null = null;
+    if (el && typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const width = entry.contentRect.width;
+          if (width > 0 && Math.abs(width - lastWidthRef.current) > 0.5) {
+            lastWidthRef.current = width;
+            adjustHeight();
+          }
+        }
+      });
+      observer.observe(el);
+    }
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(timer50);
+      clearTimeout(timer150);
+      clearTimeout(timer300);
+      if (observer) {
+        observer.disconnect();
+      }
+    };
+  }, [value, defaultValue, adjustHeight]);
 
   return (
     <textarea
       ref={textareaRef}
-      rows={minRows}
+      rows={rows}
       value={value}
+      defaultValue={defaultValue}
       onChange={(e) => {
-        onChange?.(e);
         adjustHeight();
+        if (onChange) onChange(e);
       }}
-      className={combinedClasses}
+      onInput={(e) => {
+        adjustHeight();
+        if (onInput) onInput(e);
+      }}
+      placeholder={placeholder}
+      className={`resize-none overflow-hidden break-words ${className}`}
       {...props}
     />
   );

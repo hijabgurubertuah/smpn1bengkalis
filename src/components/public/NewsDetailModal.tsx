@@ -114,105 +114,66 @@ const SingleNewsModalView: React.FC<SingleNewsModalViewProps> = ({
 
   const handleShare = async () => {
     try {
-      const url = new URL(window.location.origin + window.location.pathname);
-      url.searchParams.set('post', article.id);
-      const shareUrl = url.toString();
+      const permalink = `${window.location.origin}/berita/${article.slug || article.id}`;
 
-      // Formatted text for social sharing (Judul & Link saja - tanpa isi postingan)
-      const shareText = `*${article.title}*\n\n${shareUrl}`;
-
-      // Try native Web Share API first if supported
-      if (navigator.share) {
+      // 1. Try native Web Share API (Mobile)
+      if (typeof navigator !== 'undefined' && navigator.share) {
         try {
           await navigator.share({
             title: article.title,
-            url: shareUrl,
+            url: permalink,
           });
           setCopiedNotice(true);
-          setTimeout(() => setCopiedNotice(false), 3000);
+          setTimeout(() => setCopiedNotice(false), 2500);
           return;
         } catch (shareErr) {
           if ((shareErr as Error)?.name === 'AbortError') return;
         }
       }
 
-      // Fallback: Copy to clipboard and open WhatsApp
-      if (navigator.clipboard) {
-        try {
-          await navigator.clipboard.writeText(shareText);
-          setCopiedNotice(true);
-          setTimeout(() => setCopiedNotice(false), 3500);
-        } catch {}
+      // 2. Desktop fallback: Copy link to clipboard
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(permalink);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = permalink;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
       }
-
-      const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
-      window.open(waUrl, '_blank');
+      setCopiedNotice(true);
+      setTimeout(() => setCopiedNotice(false), 2500);
     } catch (e) {
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(window.location.href);
-        setCopiedNotice(true);
-        setTimeout(() => setCopiedNotice(false), 3000);
-      }
+      const permalink = `${window.location.origin}/berita/${article.slug || article.id}`;
+      window.prompt('Salin link postingan:', permalink);
     }
   };
 
-  // Sync active article ID to URL and update Open Graph meta tags (cover image, title, & description)
+  // Sync active article ID/slug to URL and client title
   React.useEffect(() => {
     if (!article?.id) return;
 
-    // 1. Sync URL parameter ?post=
+    const originalTitle = document.title;
+    const permalinkPath = `/berita/${article.slug || article.id}`;
+
+    // 1. Sync URL path to /berita/:idOrSlug
     try {
-      const url = new URL(window.location.href);
-      url.searchParams.set('post', article.id);
-      window.history.replaceState({}, '', url.toString());
+      if (window.location.pathname !== permalinkPath) {
+        window.history.replaceState({ articleId: article.id }, '', permalinkPath);
+      }
     } catch {}
 
-    // 2. Dynamic OpenGraph / Title / Image / Description meta tags
-    const originalTitle = document.title;
-    const currentShareUrl = `${window.location.origin}${window.location.pathname}?post=${article.id}`;
+    // 2. Client-side title update
     document.title = `${article.title} - SMP Negeri 1 Bengkalis`;
-
-    const setMetaTag = (selector: string, attr: string, value: string) => {
-      let tag = document.querySelector(selector);
-      if (!tag) {
-        tag = document.createElement('meta');
-        const parts = selector.replace(/[\[\]"']/g, '').split('=');
-        if (parts.length === 2) {
-          tag.setAttribute(parts[0], parts[1]);
-        }
-        document.head.appendChild(tag);
-      }
-      tag.setAttribute(attr, value);
-    };
-
-    const cleanSummary = "Portal Resmi SMP Negeri 1 Bengkalis";
-
-    const ogImageUrl = getOptimizedOgImageUrl(article.coverImage);
-
-    setMetaTag('meta[property="og:image"]', 'content', ogImageUrl);
-    setMetaTag('meta[name="twitter:image"]', 'content', ogImageUrl);
-    let linkImg = document.querySelector('link[rel="image_src"]') as HTMLLinkElement;
-    if (!linkImg) {
-      linkImg = document.createElement('link');
-      linkImg.rel = 'image_src';
-      document.head.appendChild(linkImg);
-    }
-    linkImg.href = ogImageUrl;
-
-    setMetaTag('meta[property="og:title"]', 'content', article.title);
-    setMetaTag('meta[name="twitter:title"]', 'content', article.title);
-    setMetaTag('meta[property="og:description"]', 'content', cleanSummary);
-    setMetaTag('meta[name="twitter:description"]', 'content', cleanSummary);
-    setMetaTag('meta[name="description"]', 'content', cleanSummary);
-    setMetaTag('meta[property="og:url"]', 'content', currentShareUrl);
 
     return () => {
       document.title = originalTitle;
       try {
-        const url = new URL(window.location.href);
-        if (url.searchParams.get('post') === article.id) {
-          url.searchParams.delete('post');
-          window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
+        if (window.location.pathname.startsWith('/berita/')) {
+          window.history.replaceState({}, '', '/');
         }
       } catch {}
     };
@@ -249,7 +210,7 @@ const SingleNewsModalView: React.FC<SingleNewsModalViewProps> = ({
         {copiedNotice && (
           <div className="absolute top-16 right-4 sm:right-6 z-50 bg-slate-900/95 text-white text-xs px-3.5 py-2.5 rounded-xl shadow-xl border border-slate-700 flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span>Tautan disalin & membuka WhatsApp...</span>
+            <span>Link disalin</span>
           </div>
         )}
 

@@ -19,6 +19,7 @@ import {
   Info,
 } from 'lucide-react';
 import { ImageUploadButton } from '../admin/ImageUploadButton';
+import { AutoResizeTextarea } from './AutoResizeTextarea';
 import { saveGTKSubmission, loadSchoolConfig } from '../../lib/firebase';
 import { DEFAULT_GTK_FORM_CONFIG } from '../../lib/defaultData';
 
@@ -201,7 +202,7 @@ export const DataGTKForm: React.FC<DataGTKFormProps> = ({
     }
 
     if (isFieldEnabled('photoUrl') && isFieldRequired('photoUrl', false) && !formData.photoUrl?.trim()) {
-      setErrorMessage(`Harap unggah ${getFieldLabel('photoUrl', 'Foto Profil Guru')}.`);
+      setErrorMessage(`Harap unggah ${getFieldLabel('photoUrl', 'Foto Formal')}.`);
       return;
     }
 
@@ -296,13 +297,11 @@ export const DataGTKForm: React.FC<DataGTKFormProps> = ({
           </div>
           <div>
             <h3 className="text-sm font-bold text-slate-900">
-              {formData.id ? 'Edit Biodata GTK' : activeFormConfig.formHeaderTitle || 'Formulir Data Guru & GTK'}
+              {formData.id ? 'Edit Biodata GTK' : activeFormConfig.formHeaderTitle || 'Formulir GTK'}
             </h3>
-            <p className="text-[11px] text-slate-500">
-              {formData.id
-                ? 'Memperbarui data yang sudah terdaftar'
-                : activeFormConfig.formHeaderSubtitle || 'Lengkapi biodata resmi pendidik'}
-            </p>
+            {activeFormConfig.formHeaderSubtitle && (
+              <p className="text-[11px] text-slate-500">{activeFormConfig.formHeaderSubtitle}</p>
+            )}
           </div>
         </div>
 
@@ -345,7 +344,7 @@ export const DataGTKForm: React.FC<DataGTKFormProps> = ({
               <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5 text-blue-600" />
                 <span>
-                  {getFieldLabel('photoUrl', 'Foto Profil Guru')}
+                  {getFieldLabel('photoUrl', 'Foto Formal')}
                   {isFieldRequired('photoUrl', false) && <span className="text-red-500 ml-1">*</span>}
                 </span>
               </label>
@@ -358,7 +357,7 @@ export const DataGTKForm: React.FC<DataGTKFormProps> = ({
             </div>
 
             <ImageUploadButton
-              label={getFieldLabel('photoUrl', 'Foto Profil Guru')}
+              label={getFieldLabel('photoUrl', 'Foto Formal')}
               value={formData.photoUrl || ''}
               onChange={(newUrl) => setFormData((prev) => ({ ...prev, photoUrl: newUrl }))}
               onProcessingChange={(uploading) => setIsUploadingImage(uploading)}
@@ -367,9 +366,6 @@ export const DataGTKForm: React.FC<DataGTKFormProps> = ({
               layout="horizontal"
               placeholder={getFieldPlaceholder('photoUrl', 'Link foto atau unggah...')}
             />
-            {getFieldHelper('photoUrl') && (
-              <p className="text-[11px] text-slate-500">{getFieldHelper('photoUrl')}</p>
-            )}
           </div>
         )}
 
@@ -384,17 +380,14 @@ export const DataGTKForm: React.FC<DataGTKFormProps> = ({
                   {isFieldRequired('name', true) && <span className="text-red-500 ml-1">*</span>}
                 </span>
               </label>
-              <input
-                type="text"
+              <AutoResizeTextarea
+                rows={1}
                 required={isFieldRequired('name', true)}
                 value={formData.name || ''}
                 onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder={getFieldPlaceholder('name', 'Contoh: Drs. H. Ahmad Fauzi, M.Pd')}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                placeholder={getFieldPlaceholder('name', 'Nama Lengkap & Gelar')}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white leading-relaxed block"
               />
-              {getFieldHelper('name') && (
-                <p className="text-[10px] text-slate-500">{getFieldHelper('name')}</p>
-              )}
             </div>
           )}
 
@@ -407,17 +400,14 @@ export const DataGTKForm: React.FC<DataGTKFormProps> = ({
                   {isFieldRequired('nip', false) && <span className="text-red-500 ml-1">*</span>}
                 </span>
               </label>
-              <input
-                type="text"
+              <AutoResizeTextarea
+                rows={1}
                 required={isFieldRequired('nip', false)}
                 value={formData.nip || ''}
                 onChange={(e) => setFormData((prev) => ({ ...prev, nip: e.target.value }))}
-                placeholder={getFieldPlaceholder('nip', "NIP / '-' jika belum ada")}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                placeholder={getFieldPlaceholder('nip', "NIP / NUPTK")}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white leading-relaxed block"
               />
-              {getFieldHelper('nip') && (
-                <p className="text-[10px] text-slate-500">{getFieldHelper('nip')}</p>
-              )}
             </div>
           )}
         </div>
@@ -432,17 +422,14 @@ export const DataGTKForm: React.FC<DataGTKFormProps> = ({
                 {isFieldRequired('role', true) && <span className="text-red-500 ml-1">*</span>}
               </span>
             </label>
-            <input
-              type="text"
+            <AutoResizeTextarea
+              rows={1}
               required={isFieldRequired('role', true)}
               value={formData.role || ''}
               onChange={(e) => setFormData((prev) => ({ ...prev, role: e.target.value }))}
-              placeholder={getFieldPlaceholder('role', 'Contoh: Guru Matematika / Wali Kelas IX-A')}
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              placeholder={getFieldPlaceholder('role', 'Tugas yang di-Ampu / Jabatan')}
+              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white leading-relaxed block"
             />
-            {getFieldHelper('role') && (
-              <p className="text-[10px] text-slate-500">{getFieldHelper('role')}</p>
-            )}
           </div>
         )}
 
@@ -456,17 +443,14 @@ export const DataGTKForm: React.FC<DataGTKFormProps> = ({
                 {isFieldRequired('quote', true) && <span className="text-red-500 ml-1">*</span>}
               </span>
             </label>
-            <textarea
+            <AutoResizeTextarea
               required={isFieldRequired('quote', true)}
               rows={2}
               value={formData.quote || ''}
               onChange={(e) => setFormData((prev) => ({ ...prev, quote: e.target.value }))}
-              placeholder={getFieldPlaceholder('quote', 'Tuliskan motto inspiratif atau kata mutiara...')}
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              placeholder={getFieldPlaceholder('quote', 'Kata-kata Mutiara / Motto')}
+              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white leading-relaxed block"
             />
-            {getFieldHelper('quote') && (
-              <p className="text-[10px] text-slate-500">{getFieldHelper('quote')}</p>
-            )}
           </div>
         )}
 
@@ -482,17 +466,14 @@ export const DataGTKForm: React.FC<DataGTKFormProps> = ({
                     {isFieldRequired('phone', false) && <span className="text-red-500 ml-1">*</span>}
                   </span>
                 </label>
-                <input
-                  type="text"
+                <AutoResizeTextarea
+                  rows={1}
                   required={isFieldRequired('phone', false)}
                   value={formData.phone || ''}
                   onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
-                  placeholder={getFieldPlaceholder('phone', 'Contoh: 081234567890')}
-                  className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  placeholder={getFieldPlaceholder('phone', 'Nomor WhatsApp')}
+                  className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white leading-relaxed block"
                 />
-                {getFieldHelper('phone') && (
-                  <p className="text-[10px] text-slate-500">{getFieldHelper('phone')}</p>
-                )}
               </div>
             )}
 
@@ -505,17 +486,14 @@ export const DataGTKForm: React.FC<DataGTKFormProps> = ({
                     {isFieldRequired('email', false) && <span className="text-red-500 ml-1">*</span>}
                   </span>
                 </label>
-                <input
-                  type="email"
+                <AutoResizeTextarea
+                  rows={1}
                   required={isFieldRequired('email', false)}
                   value={formData.email || ''}
                   onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-                  placeholder={getFieldPlaceholder('email', 'guru@sekolah.sch.id')}
-                  className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  placeholder={getFieldPlaceholder('email', 'Email')}
+                  className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white leading-relaxed block"
                 />
-                {getFieldHelper('email') && (
-                  <p className="text-[10px] text-slate-500">{getFieldHelper('email')}</p>
-                )}
               </div>
             )}
           </div>
@@ -762,17 +740,25 @@ export const StandaloneGTKFormPage: React.FC<StandaloneGTKFormPageProps> = ({ co
           </div>
 
           <div className="space-y-1">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold tracking-wide uppercase">
-              <GraduationCap className="w-3.5 h-3.5" />
-              {formCfg.formHeaderTitle || 'Formulir Biodata Pendidik & Tenaga Kependidikan'}
-            </span>
+            {formCfg.formHeaderTitle ? (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold tracking-wide uppercase">
+                <GraduationCap className="w-3.5 h-3.5" />
+                {formCfg.formHeaderTitle}
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold tracking-wide uppercase">
+                <GraduationCap className="w-3.5 h-3.5" />
+                Formulir GTK
+              </span>
+            )}
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
               {schoolName}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto">
-              {formCfg.formHeaderSubtitle ||
-                'Lengkapi biodata resmi Anda di bawah ini untuk pendataan dan penampilan profil di carousel website sekolah.'}
-            </p>
+            {formCfg.formHeaderSubtitle && (
+              <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto">
+                {formCfg.formHeaderSubtitle}
+              </p>
+            )}
           </div>
         </div>
 

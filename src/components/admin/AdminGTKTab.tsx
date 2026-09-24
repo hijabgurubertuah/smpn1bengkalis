@@ -24,6 +24,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { DataGTKForm } from '../common/datagtk';
+import { AutoResizeTextarea } from '../common/AutoResizeTextarea';
 import { saveSchoolTabConfig, loadSchoolConfig } from '../../lib/firebase';
 import { DEFAULT_GTK_FORM_CONFIG, DEFAULT_GTK_FORM_FIELDS } from '../../lib/defaultData';
 
@@ -114,29 +115,43 @@ export const AdminGTKTab: React.FC<AdminGTKTabProps> = ({ config, onChange, onRe
     }
   };
 
-  const handleToggleTeacherVisibility = (id: string) => {
+  const handleToggleTeacherVisibility = async (id: string) => {
     const updated = gtkList.map((item) => {
       if (item.id === id) {
         return { ...item, isVisible: !item.isVisible };
       }
       return item;
     });
-    onChange({
+    const updatedConfig = {
       ...config,
       gtkList: updated,
-    });
+    };
+    onChange(updatedConfig);
+    try {
+      await saveSchoolTabConfig('gtk', updatedConfig);
+    } catch {
+      // Ignored, state updated
+    }
   };
 
-  const handleDeleteTeacher = (id: string) => {
+  const handleDeleteTeacher = async (id: string) => {
     const updated = gtkList.filter((item) => item.id !== id);
-    onChange({
+    const updatedConfig = {
       ...config,
       gtkList: updated,
-    });
+    };
+    onChange(updatedConfig);
     setDeleteConfirmId(null);
+    try {
+      await saveSchoolTabConfig('gtk', updatedConfig);
+      setToastMessage('Data guru dihapus');
+      setTimeout(() => setToastMessage(null), 2000);
+    } catch {
+      // Ignored
+    }
   };
 
-  const handleSaveTeacherData = (item: GTKItem) => {
+  const handleSaveTeacherData = async (item: GTKItem) => {
     let updatedList: GTKItem[];
     const existingIndex = gtkList.findIndex((g) => g.id === item.id);
     if (existingIndex >= 0) {
@@ -146,15 +161,23 @@ export const AdminGTKTab: React.FC<AdminGTKTabProps> = ({ config, onChange, onRe
       updatedList = [item, ...gtkList];
     }
 
-    onChange({
+    const updatedConfig = {
       ...config,
       gtkList: updatedList,
-    });
+    };
+
+    onChange(updatedConfig);
 
     setIsFormModalOpen(false);
     setEditingItem(null);
     setToastMessage('Data guru tersimpan');
     setTimeout(() => setToastMessage(null), 2000);
+
+    try {
+      await saveSchoolTabConfig('gtk', updatedConfig);
+    } catch {
+      // Background synced
+    }
   };
 
   const handleToggleSectionVisibility = () => {
@@ -344,53 +367,53 @@ export const AdminGTKTab: React.FC<AdminGTKTabProps> = ({ config, onChange, onRe
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200/80">
             <div>
               <label className="text-xs font-bold text-slate-700 block mb-1">
-                Judul Formulir (Header Form)
+                Judul Formulir
               </label>
-              <input
-                type="text"
+              <AutoResizeTextarea
+                rows={1}
                 value={currentFormConfig.formHeaderTitle || ''}
                 onChange={(e) => updateFormConfig({ formHeaderTitle: e.target.value })}
-                placeholder="Formulir Biodata Pendidik & Tenaga Kependidikan"
-                className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                placeholder="Formulir GTK"
+                className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none block"
               />
             </div>
 
             <div>
               <label className="text-xs font-bold text-slate-700 block mb-1">
-                Teks Tombol Kirim (Submit Button)
+                Teks Tombol Kirim
               </label>
-              <input
-                type="text"
+              <AutoResizeTextarea
+                rows={1}
                 value={currentFormConfig.submitButtonText || ''}
                 onChange={(e) => updateFormConfig({ submitButtonText: e.target.value })}
-                placeholder="Kirim & Simpan Biodata"
-                className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                placeholder="Kirim Biodata"
+                className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none block"
               />
             </div>
 
             <div className="md:col-span-2">
               <label className="text-xs font-bold text-slate-700 block mb-1">
-                Subjudul / Petunjuk Pengisian Formulir
+                Subjudul (Opsional)
               </label>
-              <textarea
-                rows={2}
+              <AutoResizeTextarea
+                rows={1}
                 value={currentFormConfig.formHeaderSubtitle || ''}
                 onChange={(e) => updateFormConfig({ formHeaderSubtitle: e.target.value })}
-                placeholder="Lengkapi biodata resmi Anda di bawah ini untuk pendataan..."
-                className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                placeholder=""
+                className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none block"
               />
             </div>
 
             <div className="md:col-span-2">
               <label className="text-xs font-bold text-slate-700 block mb-1">
-                Pesan Notifikasi Berhasil (Sukses Submit)
+                Pesan Notifikasi Berhasil
               </label>
-              <input
-                type="text"
+              <AutoResizeTextarea
+                rows={1}
                 value={currentFormConfig.formSuccessMessage || ''}
                 onChange={(e) => updateFormConfig({ formSuccessMessage: e.target.value })}
-                placeholder="Anda Sudah Berhasil Memasukkan Data!"
-                className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                placeholder="Data Berhasil Disimpan"
+                className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none block"
               />
             </div>
           </div>
@@ -418,22 +441,22 @@ export const AdminGTKTab: React.FC<AdminGTKTabProps> = ({ config, onChange, onRe
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   <div className="sm:col-span-1">
                     <label className="text-[11px] font-semibold text-slate-700 block mb-1">Nama Label Kolom *</label>
-                    <input
-                      type="text"
+                    <AutoResizeTextarea
+                      rows={1}
                       value={newFieldLabel}
                       onChange={(e) => setNewFieldLabel(e.target.value)}
                       placeholder="Contoh: Mata Pelajaran"
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white"
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white block"
                     />
                   </div>
                   <div className="sm:col-span-1">
                     <label className="text-[11px] font-semibold text-slate-700 block mb-1">Teks Placeholder</label>
-                    <input
-                      type="text"
+                    <AutoResizeTextarea
+                      rows={1}
                       value={newFieldPlaceholder}
                       onChange={(e) => setNewFieldPlaceholder(e.target.value)}
                       placeholder="Contoh: Tuliskan nama mapel..."
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white"
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs bg-white block"
                     />
                   </div>
                   <div className="sm:col-span-1">
@@ -491,22 +514,22 @@ export const AdminGTKTab: React.FC<AdminGTKTabProps> = ({ config, onChange, onRe
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 flex-1 min-w-0">
                       <div>
                         <label className="text-[10px] font-bold text-slate-500 block">Teks Label Kolom</label>
-                        <input
-                          type="text"
+                        <AutoResizeTextarea
+                          rows={1}
                           value={field.label}
                           onChange={(e) => updateField(field.id, { label: e.target.value })}
-                          className="w-full px-2.5 py-1 rounded-lg border border-slate-300 text-xs font-semibold text-slate-900 bg-white"
+                          className="w-full px-2.5 py-1 rounded-lg border border-slate-300 text-xs font-semibold text-slate-900 bg-white block"
                         />
                       </div>
 
                       <div>
-                        <label className="text-[10px] font-bold text-slate-500 block">Teks Placeholder (Petunjuk dalam kotak)</label>
-                        <input
-                          type="text"
+                        <label className="text-[10px] font-bold text-slate-500 block">Teks Placeholder</label>
+                        <AutoResizeTextarea
+                          rows={1}
                           value={field.placeholder || ''}
                           onChange={(e) => updateField(field.id, { placeholder: e.target.value })}
                           placeholder="Placeholder..."
-                          className="w-full px-2.5 py-1 rounded-lg border border-slate-300 text-xs text-slate-600 bg-white"
+                          className="w-full px-2.5 py-1 rounded-lg border border-slate-300 text-xs text-slate-600 bg-white block"
                         />
                       </div>
                     </div>
@@ -580,23 +603,23 @@ export const AdminGTKTab: React.FC<AdminGTKTabProps> = ({ config, onChange, onRe
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1">Judul Seksi di Website</label>
-            <input
-              type="text"
+            <AutoResizeTextarea
+              rows={1}
               value={config.gtkSectionTitle || 'Guru & Tenaga Kependidikan'}
               onChange={(e) => onChange({ ...config, gtkSectionTitle: e.target.value })}
               placeholder="Guru & Tenaga Kependidikan"
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none block"
             />
           </div>
 
           <div>
             <label className="text-xs font-bold text-slate-700 block mb-1">Subjudul Seksi di Website</label>
-            <input
-              type="text"
+            <AutoResizeTextarea
+              rows={1}
               value={config.gtkSectionSubtitle || ''}
               onChange={(e) => onChange({ ...config, gtkSectionSubtitle: e.target.value })}
               placeholder="Subjudul seksi..."
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none block"
             />
           </div>
         </div>
