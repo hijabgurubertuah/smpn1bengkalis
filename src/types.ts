@@ -312,6 +312,8 @@ export interface SchoolUser {
 }
 
 export interface SchoolConfig {
+  updatedAt?: number;
+  deleted?: boolean;
   adminPassword?: string;
   users?: SchoolUser[];
   identity: SchoolIdentity;
@@ -347,6 +349,8 @@ export interface SchoolConfig {
 
 export interface NewsArticle {
   id: string;
+  updatedAt?: number;
+  deleted?: boolean;
   title: string;
   slug: string;
   category: 'Prestasi' | 'Kegiatan' | 'Akademik' | 'Pengumuman' | 'Ekstrakurikuler' | string;

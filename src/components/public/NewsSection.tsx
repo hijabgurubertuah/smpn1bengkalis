@@ -312,6 +312,8 @@ export const NewsSection: React.FC<NewsSectionProps> = ({
                       'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800&auto=format&fit=crop&q=80'
                     }
                     alt={article.title}
+                    loading="lazy"
+                    decoding="async"
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
