@@ -116,10 +116,6 @@ const SingleNewsModalView: React.FC<SingleNewsModalViewProps> = ({
     try {
       const url = new URL(window.location.origin + window.location.pathname);
       url.searchParams.set('post', article.id);
-      url.searchParams.set('t', article.title);
-      if (article.coverImage) {
-        url.searchParams.set('img', article.coverImage);
-      }
       const shareUrl = url.toString();
 
       // Formatted text for social sharing (Judul & Link saja - tanpa isi postingan)
@@ -130,7 +126,6 @@ const SingleNewsModalView: React.FC<SingleNewsModalViewProps> = ({
         try {
           await navigator.share({
             title: article.title,
-            text: article.title,
             url: shareUrl,
           });
           setCopiedNotice(true);
@@ -165,22 +160,16 @@ const SingleNewsModalView: React.FC<SingleNewsModalViewProps> = ({
   React.useEffect(() => {
     if (!article?.id) return;
 
-    // 1. Sync URL parameters ?post= and ?t=
+    // 1. Sync URL parameter ?post=
     try {
       const url = new URL(window.location.href);
       url.searchParams.set('post', article.id);
-      url.searchParams.set('t', article.title);
-      if (article.coverImage) {
-        url.searchParams.set('img', article.coverImage);
-      } else {
-        url.searchParams.delete('img');
-      }
       window.history.replaceState({}, '', url.toString());
     } catch {}
 
     // 2. Dynamic OpenGraph / Title / Image / Description meta tags
     const originalTitle = document.title;
-    const currentShareUrl = `${window.location.origin}${window.location.pathname}?post=${article.id}&t=${encodeURIComponent(article.title)}${article.coverImage ? `&img=${encodeURIComponent(article.coverImage)}` : ''}`;
+    const currentShareUrl = `${window.location.origin}${window.location.pathname}?post=${article.id}`;
     document.title = `${article.title} - SMP Negeri 1 Bengkalis`;
 
     const setMetaTag = (selector: string, attr: string, value: string) => {
@@ -196,8 +185,7 @@ const SingleNewsModalView: React.FC<SingleNewsModalViewProps> = ({
       tag.setAttribute(attr, value);
     };
 
-    const rawSummary = article.summary || article.content || '';
-    const cleanSummary = rawSummary.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 160) || "Portal Resmi SMP Negeri 1 Bengkalis";
+    const cleanSummary = "Portal Resmi SMP Negeri 1 Bengkalis";
 
     const ogImageUrl = getOptimizedOgImageUrl(article.coverImage);
 
@@ -224,8 +212,6 @@ const SingleNewsModalView: React.FC<SingleNewsModalViewProps> = ({
         const url = new URL(window.location.href);
         if (url.searchParams.get('post') === article.id) {
           url.searchParams.delete('post');
-          url.searchParams.delete('t');
-          url.searchParams.delete('img');
           window.history.replaceState({}, '', url.pathname + (url.search ? url.search : ''));
         }
       } catch {}

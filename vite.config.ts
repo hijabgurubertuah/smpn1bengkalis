@@ -45,24 +45,7 @@ export default defineConfig(() => {
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2}'],
-          navigateFallback: '/index.html',
-          navigateFallbackDenylist: [/^\/__/, /^\/api/, /^https?:\/\/(firestore|script|drive)\./],
           runtimeCaching: [
-            {
-              // Google Drive & Googleusercontent images (CacheFirst strategy)
-              urlPattern: /^https:\/\/(lh[3-6]\.googleusercontent\.com|drive\.google\.com|lh3\.google\.com)\/.*/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'gambar-berita',
-                expiration: {
-                  maxEntries: 200,
-                  maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
-            },
             {
               urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
               handler: 'CacheFirst',
@@ -85,6 +68,20 @@ export default defineConfig(() => {
                 expiration: {
                   maxEntries: 10,
                   maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/images\.unsplash\.com\/.*/i,
+              handler: 'StaleWhileRevalidate',
+              options: {
+                cacheName: 'unsplash-images-cache',
+                expiration: {
+                  maxEntries: 100,
+                  maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
                 },
                 cacheableResponse: {
                   statuses: [0, 200],

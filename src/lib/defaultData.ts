@@ -1,87 +1,6 @@
-import { SchoolConfig, NewsArticle, GTKFormFieldConfig, GTKFormCustomConfig } from '../types';
+import { SchoolConfig, NewsArticle } from '../types';
 import { DEFAULT_THEME_CONFIG } from './themePresets';
 import { DEFAULT_APPS_SCRIPT_WEB_APP_URL, DEFAULT_APPS_SCRIPT_FOLDER_ID } from './googleAppsScript';
-
-export const DEFAULT_GTK_FORM_FIELDS: GTKFormFieldConfig[] = [
-  {
-    id: 'field_photo',
-    name: 'photoUrl',
-    label: 'Foto Formal',
-    placeholder: 'Pilih foto atau tempel link foto...',
-    required: false,
-    enabled: true,
-    helperText: '',
-    type: 'image',
-  },
-  {
-    id: 'field_name',
-    name: 'name',
-    label: 'Nama Lengkap & Gelar',
-    placeholder: 'Nama Lengkap & Gelar',
-    required: true,
-    enabled: true,
-    helperText: '',
-    type: 'text',
-  },
-  {
-    id: 'field_nip',
-    name: 'nip',
-    label: 'NIP / NUPTK',
-    placeholder: "NIP / NUPTK (isi '-' jika belum ada)",
-    required: false,
-    enabled: true,
-    helperText: '',
-    type: 'text',
-  },
-  {
-    id: 'field_role',
-    name: 'role',
-    label: 'Tugas yang di-Ampu / Jabatan',
-    placeholder: 'Tugas yang di-Ampu / Jabatan',
-    required: true,
-    enabled: true,
-    helperText: '',
-    type: 'text',
-  },
-  {
-    id: 'field_quote',
-    name: 'quote',
-    label: 'Kata-kata Mutiara / Motto',
-    placeholder: 'Tuliskan motto inspiratif...',
-    required: true,
-    enabled: true,
-    helperText: '',
-    type: 'textarea',
-  },
-  {
-    id: 'field_phone',
-    name: 'phone',
-    label: 'Nomor WhatsApp (Opsional)',
-    placeholder: 'Nomor WhatsApp',
-    required: false,
-    enabled: true,
-    helperText: '',
-    type: 'tel',
-  },
-  {
-    id: 'field_email',
-    name: 'email',
-    label: 'Email (Opsional)',
-    placeholder: 'Email',
-    required: false,
-    enabled: true,
-    helperText: '',
-    type: 'email',
-  },
-];
-
-export const DEFAULT_GTK_FORM_CONFIG: GTKFormCustomConfig = {
-  formHeaderTitle: '',
-  formHeaderSubtitle: '',
-  formSuccessMessage: 'Data Berhasil Disimpan',
-  submitButtonText: 'Kirim Biodata',
-  fields: DEFAULT_GTK_FORM_FIELDS,
-};
 
 export const DEFAULT_SCHOOL_CONFIG: SchoolConfig = {
   adminPassword: '',
@@ -217,7 +136,6 @@ export const DEFAULT_SCHOOL_CONFIG: SchoolConfig = {
   gtkList: [],
   gtkSectionTitle: "Guru & Tenaga Kependidikan",
   gtkSectionSubtitle: "Mengenal para pendidik dan tenaga kependidikan berdedikasi yang membimbing dan menginspirasi generasi penerus bangsa.",
-  gtkFormConfig: DEFAULT_GTK_FORM_CONFIG,
 };
 
 // Empty default articles: all articles are loaded purely from Firebase and cache

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { GTKItem, SchoolConfig, GTKFormCustomConfig, GTKFormFieldConfig } from '../../types';
+import { GTKItem, SchoolConfig } from '../../types';
 import {
   User,
   GraduationCap,
@@ -19,14 +19,11 @@ import {
   Info,
 } from 'lucide-react';
 import { ImageUploadButton } from '../admin/ImageUploadButton';
-import { AutoResizeTextarea } from './AutoResizeTextarea';
 import { saveGTKSubmission, loadSchoolConfig } from '../../lib/firebase';
-import { DEFAULT_GTK_FORM_CONFIG } from '../../lib/defaultData';
 
 interface DataGTKFormProps {
   initialData?: Partial<GTKItem>;
   existingGtkList?: GTKItem[];
-  formConfig?: GTKFormCustomConfig;
   onSubmitSuccess?: (item: GTKItem) => void;
   onCancel?: () => void;
   onExit?: () => void;
@@ -37,12 +34,11 @@ interface DataGTKFormProps {
 export const DataGTKForm: React.FC<DataGTKFormProps> = ({
   initialData,
   existingGtkList,
-  formConfig: propFormConfig,
   onSubmitSuccess,
   onCancel,
   onExit,
   isStandalone = false,
-  submitButtonLabel,
+  submitButtonLabel = 'Kirim & Simpan Biodata',
 }) => {
   const [formData, setFormData] = useState<Partial<GTKItem>>({
     id: initialData?.id || '',
@@ -55,10 +51,6 @@ export const DataGTKForm: React.FC<DataGTKFormProps> = ({
     email: initialData?.email || '',
     isVisible: initialData?.isVisible !== undefined ? initialData.isVisible : true,
   });
-
-  const [activeFormConfig, setActiveFormConfig] = useState<GTKFormCustomConfig>(
-    propFormConfig || DEFAULT_GTK_FORM_CONFIG
-  );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -77,25 +69,16 @@ export const DataGTKForm: React.FC<DataGTKFormProps> = ({
   const [loadedGtkList, setLoadedGtkList] = useState<GTKItem[]>(existingGtkList || []);
 
   useEffect(() => {
-    if (propFormConfig) {
-      setActiveFormConfig(propFormConfig);
-    }
-  }, [propFormConfig]);
-
-  useEffect(() => {
     if (!existingGtkList || existingGtkList.length === 0) {
       loadSchoolConfig().then((cfg) => {
         if (Array.isArray(cfg.gtkList)) {
           setLoadedGtkList(cfg.gtkList);
         }
-        if (cfg.gtkFormConfig && !propFormConfig) {
-          setActiveFormConfig(cfg.gtkFormConfig);
-        }
       });
     } else {
       setLoadedGtkList(existingGtkList);
     }
-  }, [existingGtkList, propFormConfig]);
+  }, [existingGtkList]);
 
   // Handle standard exit action
   const handleExitAction = () => {
@@ -143,37 +126,6 @@ export const DataGTKForm: React.FC<DataGTKFormProps> = ({
     );
   };
 
-  // Helper to get field config
-  const getField = (name: string): GTKFormFieldConfig | undefined => {
-    const fields = activeFormConfig.fields || DEFAULT_GTK_FORM_CONFIG.fields || [];
-    return fields.find((f) => f.name === name);
-  };
-
-  const isFieldEnabled = (name: string): boolean => {
-    const field = getField(name);
-    return field ? field.enabled !== false : true;
-  };
-
-  const isFieldRequired = (name: string, defaultReq: boolean): boolean => {
-    const field = getField(name);
-    return field?.required !== undefined ? field.required : defaultReq;
-  };
-
-  const getFieldLabel = (name: string, defaultLabel: string): string => {
-    const field = getField(name);
-    return field?.label?.trim() || defaultLabel;
-  };
-
-  const getFieldPlaceholder = (name: string, defaultPlaceholder: string): string => {
-    const field = getField(name);
-    return field?.placeholder?.trim() || defaultPlaceholder;
-  };
-
-  const getFieldHelper = (name: string, defaultHelper?: string): string | undefined => {
-    const field = getField(name);
-    return field?.helperText?.trim() || defaultHelper;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
@@ -185,29 +137,17 @@ export const DataGTKForm: React.FC<DataGTKFormProps> = ({
       return;
     }
 
-    // Dynamic Validations based on active form config
-    if (isFieldEnabled('name') && isFieldRequired('name', true) && !formData.name?.trim()) {
-      setErrorMessage(`Harap masukkan ${getFieldLabel('name', 'Nama Lengkap & Gelar')}.`);
+    // Validation
+    if (!formData.name?.trim()) {
+      setErrorMessage('Harap masukkan Nama Lengkap beserta gelar.');
       return;
     }
-
-    if (isFieldEnabled('role') && isFieldRequired('role', true) && !formData.role?.trim()) {
-      setErrorMessage(`Harap masukkan ${getFieldLabel('role', 'Tugas yang di-Ampu / Jabatan')}.`);
+    if (!formData.role?.trim()) {
+      setErrorMessage('Harap masukkan Tugas yang di-Ampu / Jabatan / Mata Pelajaran.');
       return;
     }
-
-    if (isFieldEnabled('quote') && isFieldRequired('quote', true) && !formData.quote?.trim()) {
-      setErrorMessage(`Harap masukkan ${getFieldLabel('quote', 'Kata-kata Mutiara / Motto')}.`);
-      return;
-    }
-
-    if (isFieldEnabled('photoUrl') && isFieldRequired('photoUrl', false) && !formData.photoUrl?.trim()) {
-      setErrorMessage(`Harap unggah ${getFieldLabel('photoUrl', 'Foto Formal')}.`);
-      return;
-    }
-
-    if (isFieldEnabled('nip') && isFieldRequired('nip', false) && !formData.nip?.trim()) {
-      setErrorMessage(`Harap masukkan ${getFieldLabel('nip', 'NIP / NUPTK')}.`);
+    if (!formData.quote?.trim()) {
+      setErrorMessage('Harap masukkan Kata-kata Mutiara atau motto pendidikan.');
       return;
     }
 
@@ -284,9 +224,6 @@ export const DataGTKForm: React.FC<DataGTKFormProps> = ({
     }
   };
 
-  const finalSubmitBtnText =
-    submitButtonLabel || activeFormConfig.submitButtonText || 'Kirim & Simpan Biodata';
-
   return (
     <div className="relative">
       {/* Top Header Bar with Exit X Button */}
@@ -297,11 +234,11 @@ export const DataGTKForm: React.FC<DataGTKFormProps> = ({
           </div>
           <div>
             <h3 className="text-sm font-bold text-slate-900">
-              {formData.id ? 'Edit Biodata GTK' : activeFormConfig.formHeaderTitle || 'Formulir GTK'}
+              {formData.id ? 'Edit Biodata GTK' : 'Formulir Data Guru & GTK'}
             </h3>
-            {activeFormConfig.formHeaderSubtitle && (
-              <p className="text-[11px] text-slate-500">{activeFormConfig.formHeaderSubtitle}</p>
-            )}
+            <p className="text-[11px] text-slate-500">
+              {formData.id ? 'Memperbarui data yang sudah terdaftar' : 'Lengkapi biodata resmi pendidik'}
+            </p>
           </div>
         </div>
 
@@ -338,166 +275,126 @@ export const DataGTKForm: React.FC<DataGTKFormProps> = ({
         )}
 
         {/* 1. Upload Foto */}
-        {isFieldEnabled('photoUrl') && (
-          <div className="bg-slate-50 rounded-xl p-3 border border-slate-200/90 space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-blue-600" />
-                <span>
-                  {getFieldLabel('photoUrl', 'Foto Formal')}
-                  {isFieldRequired('photoUrl', false) && <span className="text-red-500 ml-1">*</span>}
-                </span>
-              </label>
-              {isUploadingImage && (
-                <span className="text-[11px] font-semibold text-blue-600 flex items-center gap-1">
-                  <RefreshCw className="w-3 h-3 animate-spin" />
-                  <span>Sedang mengunggah...</span>
-                </span>
-              )}
-            </div>
-
-            <ImageUploadButton
-              label={getFieldLabel('photoUrl', 'Foto Formal')}
-              value={formData.photoUrl || ''}
-              onChange={(newUrl) => setFormData((prev) => ({ ...prev, photoUrl: newUrl }))}
-              onProcessingChange={(uploading) => setIsUploadingImage(uploading)}
-              preset="avatar"
-              aspectRatio="square"
-              layout="horizontal"
-              placeholder={getFieldPlaceholder('photoUrl', 'Link foto atau unggah...')}
-            />
+        <div className="bg-slate-50 rounded-xl p-3 border border-slate-200/90 space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+              <User className="w-3.5 h-3.5 text-blue-600" />
+              <span>Foto Guru</span>
+            </label>
+            {isUploadingImage && (
+              <span className="text-[11px] font-semibold text-blue-600 flex items-center gap-1">
+                <RefreshCw className="w-3 h-3 animate-spin" />
+                <span>Sedang mengunggah...</span>
+              </span>
+            )}
           </div>
-        )}
+
+          <ImageUploadButton
+            label="Foto Guru"
+            value={formData.photoUrl || ''}
+            onChange={(newUrl) => setFormData((prev) => ({ ...prev, photoUrl: newUrl }))}
+            onProcessingChange={(uploading) => setIsUploadingImage(uploading)}
+            preset="avatar"
+            aspectRatio="square"
+            layout="horizontal"
+            placeholder="Link foto atau unggah..."
+          />
+        </div>
 
         {/* 2. Informasi Utama (Nama & NIP) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {isFieldEnabled('name') && (
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                <GraduationCap className="w-3.5 h-3.5 text-blue-600" />
-                <span>
-                  {getFieldLabel('name', 'Nama Lengkap & Gelar')}
-                  {isFieldRequired('name', true) && <span className="text-red-500 ml-1">*</span>}
-                </span>
-              </label>
-              <AutoResizeTextarea
-                rows={1}
-                required={isFieldRequired('name', true)}
-                value={formData.name || ''}
-                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                placeholder={getFieldPlaceholder('name', 'Nama Lengkap & Gelar')}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white leading-relaxed block"
-              />
-            </div>
-          )}
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+              <GraduationCap className="w-3.5 h-3.5 text-blue-600" />
+              <span>Nama Lengkap & Gelar <span className="text-red-500">*</span></span>
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.name || ''}
+              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+              placeholder="Nama dan gelar..."
+              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            />
+          </div>
 
-          {isFieldEnabled('nip') && (
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                <Award className="w-3.5 h-3.5 text-blue-600" />
-                <span>
-                  {getFieldLabel('nip', 'NIP / NUPTK')}
-                  {isFieldRequired('nip', false) && <span className="text-red-500 ml-1">*</span>}
-                </span>
-              </label>
-              <AutoResizeTextarea
-                rows={1}
-                required={isFieldRequired('nip', false)}
-                value={formData.nip || ''}
-                onChange={(e) => setFormData((prev) => ({ ...prev, nip: e.target.value }))}
-                placeholder={getFieldPlaceholder('nip', "NIP / NUPTK")}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white leading-relaxed block"
-              />
-            </div>
-          )}
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+              <Award className="w-3.5 h-3.5 text-blue-600" />
+              <span>NIP / NUPTK</span>
+            </label>
+            <input
+              type="text"
+              value={formData.nip || ''}
+              onChange={(e) => setFormData((prev) => ({ ...prev, nip: e.target.value }))}
+              placeholder="NIP / '-' jika belum ada"
+              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            />
+          </div>
         </div>
 
         {/* 3. Tugas yang di Ampu */}
-        {isFieldEnabled('role') && (
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-              <span>
-                {getFieldLabel('role', 'Tugas yang di-Ampu / Jabatan')}
-                {isFieldRequired('role', true) && <span className="text-red-500 ml-1">*</span>}
-              </span>
-            </label>
-            <AutoResizeTextarea
-              rows={1}
-              required={isFieldRequired('role', true)}
-              value={formData.role || ''}
-              onChange={(e) => setFormData((prev) => ({ ...prev, role: e.target.value }))}
-              placeholder={getFieldPlaceholder('role', 'Tugas yang di-Ampu / Jabatan')}
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white leading-relaxed block"
-            />
-          </div>
-        )}
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+            <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+            <span>Tugas yang di-Ampu / Jabatan <span className="text-red-500">*</span></span>
+          </label>
+          <input
+            type="text"
+            required
+            value={formData.role || ''}
+            onChange={(e) => setFormData((prev) => ({ ...prev, role: e.target.value }))}
+            placeholder="Mata pelajaran / tugas..."
+            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          />
+        </div>
 
         {/* 4. Kata-kata Mutiara */}
-        {isFieldEnabled('quote') && (
-          <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-              <Quote className="w-3.5 h-3.5 text-blue-600" />
-              <span>
-                {getFieldLabel('quote', 'Kata-kata Mutiara / Motto')}
-                {isFieldRequired('quote', true) && <span className="text-red-500 ml-1">*</span>}
-              </span>
-            </label>
-            <AutoResizeTextarea
-              required={isFieldRequired('quote', true)}
-              rows={2}
-              value={formData.quote || ''}
-              onChange={(e) => setFormData((prev) => ({ ...prev, quote: e.target.value }))}
-              placeholder={getFieldPlaceholder('quote', 'Kata-kata Mutiara / Motto')}
-              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white leading-relaxed block"
-            />
-          </div>
-        )}
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+            <Quote className="w-3.5 h-3.5 text-blue-600" />
+            <span>Kata-kata Mutiara <span className="text-red-500">*</span></span>
+          </label>
+          <textarea
+            required
+            rows={2}
+            value={formData.quote || ''}
+            onChange={(e) => setFormData((prev) => ({ ...prev, quote: e.target.value }))}
+            placeholder="Kata-kata mutiara / motto pendidikan..."
+            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          />
+        </div>
 
         {/* 5. Kontak Tambahan (Opsional) */}
-        {(isFieldEnabled('phone') || isFieldEnabled('email')) && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 border-t border-slate-100">
-            {isFieldEnabled('phone') && (
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                  <Phone className="w-3.5 h-3.5 text-slate-500" />
-                  <span>
-                    {getFieldLabel('phone', 'Nomor WhatsApp (Opsional)')}
-                    {isFieldRequired('phone', false) && <span className="text-red-500 ml-1">*</span>}
-                  </span>
-                </label>
-                <AutoResizeTextarea
-                  rows={1}
-                  required={isFieldRequired('phone', false)}
-                  value={formData.phone || ''}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
-                  placeholder={getFieldPlaceholder('phone', 'Nomor WhatsApp')}
-                  className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white leading-relaxed block"
-                />
-              </div>
-            )}
-
-            {isFieldEnabled('email') && (
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                  <Mail className="w-3.5 h-3.5 text-slate-500" />
-                  <span>
-                    {getFieldLabel('email', 'Email (Opsional)')}
-                    {isFieldRequired('email', false) && <span className="text-red-500 ml-1">*</span>}
-                  </span>
-                </label>
-                <AutoResizeTextarea
-                  rows={1}
-                  required={isFieldRequired('email', false)}
-                  value={formData.email || ''}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-                  placeholder={getFieldPlaceholder('email', 'Email')}
-                  className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white leading-relaxed block"
-                />
-              </div>
-            )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 border-t border-slate-100">
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+              <Phone className="w-3.5 h-3.5 text-slate-500" />
+              <span>WhatsApp (Opsional)</span>
+            </label>
+            <input
+              type="text"
+              value={formData.phone || ''}
+              onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+              placeholder="08..."
+              className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            />
           </div>
-        )}
+
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+              <Mail className="w-3.5 h-3.5 text-slate-500" />
+              <span>Email (Opsional)</span>
+            </label>
+            <input
+              type="email"
+              value={formData.email || ''}
+              onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+              placeholder="email@..."
+              className="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            />
+          </div>
+        </div>
 
         {/* Action Buttons */}
         <div className="flex items-center justify-between gap-2 pt-3 border-t border-slate-200">
@@ -532,7 +429,7 @@ export const DataGTKForm: React.FC<DataGTKFormProps> = ({
             ) : (
               <>
                 <Send className="w-3.5 h-3.5" />
-                <span>{formData.id ? 'Perbarui Biodata' : finalSubmitBtnText}</span>
+                <span>{formData.id ? 'Perbarui Biodata' : submitButtonLabel}</span>
               </>
             )}
           </button>
@@ -623,7 +520,7 @@ export const DataGTKForm: React.FC<DataGTKFormProps> = ({
 
             <div className="space-y-1">
               <h4 className="text-base font-bold text-slate-900">
-                {activeFormConfig.formSuccessMessage || 'Anda Sudah Berhasil Memasukkan Data!'}
+                Anda Sudah Berhasil Memasukkan Data!
               </h4>
               <p className="text-xs text-slate-600">
                 Terima kasih, biodata <strong>{savedItem.name}</strong> telah tersimpan ke sistem database sekolah.
@@ -697,7 +594,6 @@ interface StandaloneGTKFormPageProps {
 export const StandaloneGTKFormPage: React.FC<StandaloneGTKFormPageProps> = ({ config }) => {
   const schoolName = config.identity?.name || 'Portal Sekolah';
   const schoolLogo = config.identity?.logoUrl || '';
-  const formCfg = config.gtkFormConfig || DEFAULT_GTK_FORM_CONFIG;
 
   const handleExitToHome = () => {
     if (typeof window !== 'undefined') {
@@ -740,25 +636,16 @@ export const StandaloneGTKFormPage: React.FC<StandaloneGTKFormPageProps> = ({ co
           </div>
 
           <div className="space-y-1">
-            {formCfg.formHeaderTitle ? (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold tracking-wide uppercase">
-                <GraduationCap className="w-3.5 h-3.5" />
-                {formCfg.formHeaderTitle}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold tracking-wide uppercase">
-                <GraduationCap className="w-3.5 h-3.5" />
-                Formulir GTK
-              </span>
-            )}
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold tracking-wide uppercase">
+              <GraduationCap className="w-3.5 h-3.5" />
+              Formulir Biodata Pendidik & Tenaga Kependidikan
+            </span>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
               {schoolName}
             </h1>
-            {formCfg.formHeaderSubtitle && (
-              <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto">
-                {formCfg.formHeaderSubtitle}
-              </p>
-            )}
+            <p className="text-xs sm:text-sm text-slate-600 max-w-md mx-auto">
+              Lengkapi biodata resmi Anda di bawah ini untuk pendataan dan penampilan profil di carousel website sekolah.
+            </p>
           </div>
         </div>
 
@@ -767,9 +654,8 @@ export const StandaloneGTKFormPage: React.FC<StandaloneGTKFormPageProps> = ({ co
           <DataGTKForm
             isStandalone={true}
             existingGtkList={config.gtkList || []}
-            formConfig={formCfg}
             onExit={handleExitToHome}
-            submitButtonLabel={formCfg.submitButtonText || 'Kirim Biodata Guru Sekarang'}
+            submitButtonLabel="Kirim Biodata Guru Sekarang"
           />
         </div>
 

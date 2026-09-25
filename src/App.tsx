@@ -15,7 +15,6 @@ import {
   saveNewsArticleLocally,
   deleteNewsArticle,
   fetchAndSyncLatestData,
-  fetchDeltaSync,
   subscribeToCloudConfig,
   subscribeToCloudArticles,
   normalizeSchoolConfig,
@@ -152,19 +151,17 @@ const getInitialAdminMode = (): boolean => {
 export default function App() {
   const [config, setConfig] = useState<SchoolConfig>(() => getInitialSchoolConfig());
   const [articles, setArticles] = useState<NewsArticle[]>(() => getInitialNewsArticles());
-  const [newArticlesBuffered, setNewArticlesBuffered] = useState<NewsArticle[]>([]);
-  const [swUpdateAvailable, setSwUpdateAvailable] = useState(false);
   const [isAdminMode, setIsAdminMode] = useState<boolean>(() => getInitialAdminMode());
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialSyncing, setIsInitialSyncing] = useState(false);
-  const [isSyncingData, setIsSyncingData] = useState(false);
+  const [isSyncingData, setIsSyncingData] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [syncToast, setSyncToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
   const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
 
-  // Fullscreen loading active ONLY during explicit admin refresh or manual actions, NEVER on normal public render
-  const isScreenLoading = isRefreshing && isAdminMode;
+  // Determine if the fullscreen rotate-Y loading screen should be active (immediate, no 2-sec wait)
+  const isScreenLoading = isSyncingData || isRefreshing || isInitialSyncing || isLoading;
 
   // Sync admin mode to sessionStorage and URL query params
   useEffect(() => {
@@ -179,26 +176,6 @@ export default function App() {
       } catch {}
     }
   }, [isAdminMode]);
-
-  // Service worker update listener
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistration().then((reg) => {
-        if (reg) {
-          reg.addEventListener('updatefound', () => {
-            const newWorker = reg.installing;
-            if (newWorker) {
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  setSwUpdateAvailable(true);
-                }
-              });
-            }
-          });
-        }
-      });
-    }
-  }, []);
 
   // Auto-open article from URL parameter or popstate (?post=... or ?berita=...)
   useEffect(() => {
@@ -227,54 +204,101 @@ export default function App() {
     return () => window.removeEventListener('popstate', checkUrlForPost);
   }, [articles]);
 
-  // Stale-While-Revalidate: Delta sync in background with 60-second throttle
+  // Initialize data: Fast render from offline partition, followed immediately by live Firebase sync and realtime subscription
   useEffect(() => {
     let isMounted = true;
-    let lastSyncTime = 0;
 
-    const performBackgroundDeltaSync = async (force = false) => {
-      const now = Date.now();
-      if (!force && now - lastSyncTime < 60000) return;
-      lastSyncTime = now;
-
+    // Clean up hard_reset query param from URL if present so it doesn't linger
+    if (typeof window !== 'undefined' && window.location.search.includes('hard_reset=')) {
       try {
-        const syncRes = await fetchDeltaSync(articles);
+        const url = new URL(window.location.href);
+        url.searchParams.delete('hard_reset');
+        window.history.replaceState({}, '', url.pathname + (url.search ? url.search : '') + url.hash);
+      } catch {}
+    }
+
+    async function initAndSyncData() {
+      setIsSyncingData(true);
+      // 1. Instant local hydration from local cache (without erasing anything)
+      try {
+        const [localConfig, localArticles] = await Promise.all([
+          loadSchoolConfig(),
+          loadNewsArticles(),
+        ]);
+        if (isMounted) {
+          if (localConfig) setConfig(localConfig);
+          if (localArticles && localArticles.length > 0) {
+            setArticles(localArticles);
+          }
+          setIsLoading(false);
+          setIsInitialSyncing(false);
+        }
+      } catch (err) {
+        console.warn('Init cache error, using defaults:', err);
+        if (isMounted) setIsLoading(false);
+      }
+
+      // 2. Fetch fresh updates from Firebase on every page reload/refresh (differential sync without clearing cache)
+      try {
+        const syncRes = await fetchAndSyncLatestData();
         if (!isMounted) return;
 
-        if (syncRes.success && syncRes.hasChanges) {
-          if (syncRes.config) {
+        if (syncRes.success && syncRes.config) {
+          if (syncRes.isDifferent) {
             setConfig(syncRes.config);
-          }
-          if (syncRes.newArticlesBuffered && syncRes.newArticlesBuffered.length > 0) {
-            setNewArticlesBuffered((prev) => {
-              const existingIds = new Set(prev.map((a) => a.id));
-              const itemsToAdd = syncRes.newArticlesBuffered.filter((a) => !existingIds.has(a.id));
-              return [...prev, ...itemsToAdd];
+            if (syncRes.articles) {
+              setArticles(syncRes.articles);
+              saveDedicatedPostsCache(syncRes.articles);
+            }
+            if (syncRes.config.principal) {
+              saveDedicatedPrincipalCache(syncRes.config.principal);
+            }
+            if (syncRes.config.mobileBottomNav) {
+              saveDedicatedDockCache(syncRes.config.mobileBottomNav);
+            }
+            setSyncToast({
+              message: 'Data diperbarui dari cloud',
+              type: 'success',
             });
-          }
-          if (syncRes.mergedArticles) {
-            setArticles(syncRes.mergedArticles);
-            saveDedicatedPostsCache(syncRes.mergedArticles);
+            setTimeout(() => {
+              if (isMounted) setSyncToast(null);
+            }, 1200);
           }
         }
       } catch (err) {
-        console.info('Delta sync check skipped:', err);
+        console.info('Live sync on reload skipped:', err);
+      } finally {
+        if (isMounted) {
+          setIsInitialSyncing(false);
+          setIsSyncingData(false);
+        }
       }
-    };
+    }
 
-    performBackgroundDeltaSync(true);
+    initAndSyncData();
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        performBackgroundDeltaSync(false);
+    // 3. Realtime Firestore listener for School Config (updates immediately when admin saves on any device)
+    const unsubscribeCloudConfig = subscribeToCloudConfig((newCloudConfig) => {
+      if (isMounted && !isAdminMode) {
+        setConfig(newCloudConfig);
+        if (newCloudConfig.principal) saveDedicatedPrincipalCache(newCloudConfig.principal);
+        if (newCloudConfig.mobileBottomNav) saveDedicatedDockCache(newCloudConfig.mobileBottomNav);
       }
-    };
+    });
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    // 4. Realtime Firestore listener for News Articles (updates immediately when news is created/edited/deleted)
+    const unsubscribeCloudArticles = subscribeToCloudArticles((newArticles) => {
+      if (isMounted && !isAdminMode) {
+        setArticles(newArticles);
+        saveDedicatedPostsCache(newArticles);
+        setIsInitialSyncing(false);
+      }
+    });
 
     return () => {
       isMounted = false;
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      unsubscribeCloudConfig();
+      unsubscribeCloudArticles();
     };
   }, [isAdminMode]);
 
@@ -512,37 +536,6 @@ export default function App() {
         <div className="fixed top-4 right-4 z-50 flex items-center gap-2.5 bg-slate-900/95 text-white px-4 py-2.5 rounded-xl border border-slate-700 shadow-2xl backdrop-blur-md animate-in slide-in-from-top-2 duration-200">
           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
           <span className="text-xs font-semibold">{syncToast.message}</span>
-        </div>
-      )}
-
-      {/* New Buffered Articles Banner */}
-      {newArticlesBuffered.length > 0 && (
-        <div
-          onClick={() => {
-            setArticles((prev) => [...newArticlesBuffered, ...prev]);
-            saveDedicatedPostsCache([...newArticlesBuffered, ...articles]);
-            setNewArticlesBuffered([]);
-          }}
-          className="fixed top-20 left-1/2 -translate-x-1/2 z-40 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full shadow-xl border border-blue-400/30 flex items-center gap-2.5 cursor-pointer animate-in slide-in-from-top-2 transition duration-200"
-        >
-          <Sparkles className="w-4 h-4 text-amber-300 animate-pulse shrink-0" />
-          <span className="text-xs font-bold">
-            Ada {newArticlesBuffered.length} berita baru — Klik untuk muat
-          </span>
-        </div>
-      )}
-
-      {/* New SW Version Available Banner */}
-      {swUpdateAvailable && (
-        <div className="fixed bottom-4 right-4 z-50 flex items-center gap-3 bg-slate-900 text-white px-4 py-3 rounded-2xl border border-blue-500/30 shadow-2xl animate-in slide-in-from-bottom-2">
-          <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
-          <span className="text-xs font-medium">Versi baru tersedia — Muat ulang</span>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-1 rounded-lg transition"
-          >
-            Muat Ulang
-          </button>
         </div>
       )}
 

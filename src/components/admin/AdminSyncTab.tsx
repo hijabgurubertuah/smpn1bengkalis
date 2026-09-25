@@ -6,8 +6,6 @@ import {
   saveCurrentAsNewDefault,
   getCustomDefaultMeta,
   forceRefreshFromFirebase,
-  fetchDeltaSync,
-  migrateLegacyDataWithUpdatedAt,
 } from '../../lib/firebase';
 import { clearOfflineStorage } from '../../lib/offlineStorage';
 import {
@@ -279,49 +277,6 @@ export const AdminSyncTab: React.FC<AdminSyncTabProps> = ({
     }
   };
 
-  const [migratingData, setMigratingData] = useState(false);
-
-  const handleFullReSync = async () => {
-    setSyncingCloud(true);
-    try {
-      const res = await fetchDeltaSync(articles, true);
-      if (res.success) {
-        if (res.config && res.mergedArticles) {
-          if (onSyncFromCloud) {
-            onSyncFromCloud(res.config, res.mergedArticles);
-          } else {
-            onDataRestored(res.config, res.mergedArticles);
-          }
-        }
-        setToastNotice({ type: 'success', message: 'Sinkron ulang penuh berhasil diselesaikan' });
-      } else {
-        setToastNotice({ type: 'error', message: res.message || 'Gagal sinkron ulang' });
-      }
-    } catch {
-      setToastNotice({ type: 'error', message: 'Gagal sinkron ulang' });
-    } finally {
-      setSyncingCloud(false);
-      setTimeout(() => setToastNotice(null), 2000);
-    }
-  };
-
-  const handleMigrateData = async () => {
-    setMigratingData(true);
-    try {
-      const res = await migrateLegacyDataWithUpdatedAt();
-      if (res.success) {
-        setToastNotice({ type: 'success', message: res.message });
-      } else {
-        setToastNotice({ type: 'error', message: res.message });
-      }
-    } catch {
-      setToastNotice({ type: 'error', message: 'Gagal melakukan migrasi data' });
-    } finally {
-      setMigratingData(false);
-      setTimeout(() => setToastNotice(null), 2500);
-    }
-  };
-
   // Calculate Real Storage Breakdown for the Charts
   const storageStats = useMemo(() => {
     const encoder = new TextEncoder();
@@ -514,7 +469,7 @@ export const AdminSyncTab: React.FC<AdminSyncTabProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0 flex-wrap">
+        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
           <button
             type="button"
             onClick={runConnectionCheck}
@@ -528,24 +483,13 @@ export const AdminSyncTab: React.FC<AdminSyncTabProps> = ({
 
           <button
             type="button"
-            onClick={handleFullReSync}
+            onClick={handleDownloadLatestFromFirebase}
             disabled={syncingCloud}
-            title="Lakukan sinkron ulang penuh seluruh data dari Firestore"
-            className="px-3 py-2 bg-slate-800 hover:bg-slate-900 active:scale-[0.98] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-all disabled:opacity-50"
+            title="Tarik data terbaru dari server cloud"
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer shadow-xs transition-all disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${syncingCloud ? 'animate-spin' : ''}`} />
-            <span>Sinkron Ulang Penuh</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleMigrateData}
-            disabled={migratingData}
-            title="Isi updatedAt pada dokumen lama yang belum memilikinya (Super Admin)"
-            className="px-3 py-2 bg-purple-600 hover:bg-purple-700 active:scale-[0.98] text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-xs transition-all disabled:opacity-50"
-          >
-            <Sparkles className={`w-3.5 h-3.5 ${migratingData ? 'animate-spin' : ''}`} />
-            <span>Migrasi Data Lama</span>
+            <span>{syncingCloud ? 'Menyinkronkan...' : 'Sinkronkan Cloud'}</span>
           </button>
         </div>
       </div>

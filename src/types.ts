@@ -159,25 +159,6 @@ export interface LayoutSections {
   showGTK?: boolean;
 }
 
-export interface GTKFormFieldConfig {
-  id: string;
-  name: string; // Internal key e.g., 'photoUrl', 'name', 'nip', 'role', 'quote', 'phone', 'email'
-  label: string; // Teks Label yang bisa diubah
-  placeholder?: string; // Teks Placeholder yang bisa diubah
-  required?: boolean; // Wajib diisi atau tidak
-  enabled?: boolean; // Aktif / Tampil di form
-  helperText?: string; // Teks bantuan / catatan kecil di bawah input
-  type?: 'text' | 'textarea' | 'image' | 'tel' | 'email';
-}
-
-export interface GTKFormCustomConfig {
-  formHeaderTitle?: string; // Judul Formulir di header modal/halaman
-  formHeaderSubtitle?: string; // Subjudul formulir
-  formSuccessMessage?: string; // Pesan setelah sukses
-  submitButtonText?: string; // Teks pada tombol submit
-  fields?: GTKFormFieldConfig[]; // Daftar pengaturan kolom formulir (bisa diubah, ditambah, diaktifkan/dinonaktifkan)
-}
-
 export interface GTKItem {
   id: string;
   name: string; // Nama Lengkap beserta gelar
@@ -312,8 +293,6 @@ export interface SchoolUser {
 }
 
 export interface SchoolConfig {
-  updatedAt?: number;
-  deleted?: boolean;
   adminPassword?: string;
   users?: SchoolUser[];
   identity: SchoolIdentity;
@@ -344,13 +323,10 @@ export interface SchoolConfig {
   gtkList?: GTKItem[];
   gtkSectionTitle?: string;
   gtkSectionSubtitle?: string;
-  gtkFormConfig?: GTKFormCustomConfig;
 }
 
 export interface NewsArticle {
   id: string;
-  updatedAt?: number;
-  deleted?: boolean;
   title: string;
   slug: string;
   category: 'Prestasi' | 'Kegiatan' | 'Akademik' | 'Pengumuman' | 'Ekstrakurikuler' | string;

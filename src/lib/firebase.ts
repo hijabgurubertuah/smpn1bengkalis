@@ -11,19 +11,12 @@ import {
   getDocs,
   deleteDoc,
   onSnapshot,
-  query,
-  where,
-  orderBy,
-  writeBatch,
-  serverTimestamp,
-  Timestamp,
   Firestore,
 } from 'firebase/firestore';
 import { SchoolConfig, NewsArticle, GTKItem } from '../types';
 import { DEFAULT_SCHOOL_CONFIG, DEFAULT_NEWS_ARTICLES } from './defaultData';
 import { getOfflineItem, setOfflineItem, clearOfflineStorage } from './offlineStorage';
 import { saveStoredAppsScriptConfig } from './googleAppsScript';
-import { CACHE_KEYS, getLocalCacheSync, setLocalCacheSync } from './cache';
 
 // Silence internal retry and connection warning logs from Firestore in browser/iframe environments
 try {
@@ -135,7 +128,6 @@ export function normalizeSchoolConfig(raw: Partial<SchoolConfig> | null | undefi
     gtkList: Array.isArray(sanitizedRaw.gtkList) ? sanitizedRaw.gtkList : (DEFAULT_SCHOOL_CONFIG.gtkList || []),
     gtkSectionTitle: sanitizedRaw.gtkSectionTitle !== undefined ? sanitizedRaw.gtkSectionTitle : DEFAULT_SCHOOL_CONFIG.gtkSectionTitle,
     gtkSectionSubtitle: sanitizedRaw.gtkSectionSubtitle !== undefined ? sanitizedRaw.gtkSectionSubtitle : DEFAULT_SCHOOL_CONFIG.gtkSectionSubtitle,
-    gtkFormConfig: sanitizedRaw.gtkFormConfig !== undefined ? sanitizedRaw.gtkFormConfig : DEFAULT_SCHOOL_CONFIG.gtkFormConfig,
   };
 }
 
@@ -622,17 +614,14 @@ export async function saveSchoolTabConfig(tab: string, config: SchoolConfig): Pr
   }
 
   // Ensure absolutely NO base64 image strings exist in the cloud payload (only link URLs allowed)
-  const cleanedPayload = sanitizeNoBase64({
-    ...tabPayload,
-    updatedAt: serverTimestamp(),
-  });
+  const cleanedPayload = sanitizeNoBase64(tabPayload);
 
   try {
     const configDocRef = doc(db, 'school_portal', 'main_config');
     await withTimeout(setDoc(configDocRef, cleanedPayload, { merge: true }), 4000);
     // When saved to Firestore, also update public cache so public view is in sync
     const currentArticles = (await getCachedNewsArticles('public')) || DEFAULT_NEWS_ARTICLES;
-    await saveToPublicCache({ ...config, updatedAt: Date.now() }, currentArticles);
+    await saveToPublicCache(config, currentArticles);
     return true;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -662,21 +651,11 @@ export async function saveSchoolConfig(config: SchoolConfig): Promise<boolean> {
         throw new Error('Ukuran data konfigurasi melebihi batas 1MB Firestore. Harap gunakan URL gambar eksternal (Google Drive / link publik) untuk foto kepala sekolah atau logo.');
       }
       const configDocRef = doc(db, 'school_portal', 'main_config');
-      await withTimeout(
-        setDoc(
-          configDocRef,
-          {
-            ...cleanedConfig,
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true }
-        ),
-        4000
-      );
+      await withTimeout(setDoc(configDocRef, cleanedConfig, { merge: true }), 4000);
       
       // Update public cache as well
       const currentArticles = (await getCachedNewsArticles('public')) || DEFAULT_NEWS_ARTICLES;
-      await saveToPublicCache({ ...config, updatedAt: Date.now() }, currentArticles);
+      await saveToPublicCache(config, currentArticles);
       return true;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -706,8 +685,6 @@ export async function loadSchoolConfig(): Promise<SchoolConfig> {
 export async function saveNewsArticleLocally(article: NewsArticle): Promise<boolean> {
   const localArticle: NewsArticle = {
     ...article,
-    updatedAt: Date.now(),
-    deleted: false,
     isLocalDraft: true,
   };
   try {
@@ -735,8 +712,6 @@ export async function saveNewsArticleLocally(article: NewsArticle): Promise<bool
 export async function saveNewsArticle(article: NewsArticle): Promise<boolean> {
   const cloudArticle: NewsArticle = {
     ...article,
-    updatedAt: Date.now(),
-    deleted: false,
     isLocalDraft: false,
   };
 
@@ -772,23 +747,12 @@ export async function saveNewsArticle(article: NewsArticle): Promise<boolean> {
     console.error('Error saving article locally', e);
   }
 
-  // Firestore sync with updatedAt: serverTimestamp() and deleted: false
+  // Firestore sync - ensure strictly NO base64 images (only URL links)
   if (db && (typeof navigator === 'undefined' || navigator.onLine)) {
     try {
       const cleanedArticle = sanitizeNoBase64(cloudArticle);
       const articleDoc = doc(db, 'news_articles', cloudArticle.id);
-      await withTimeout(
-        setDoc(
-          articleDoc,
-          {
-            ...cleanedArticle,
-            deleted: false,
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true }
-        ),
-        3500
-      );
+      await withTimeout(setDoc(articleDoc, cleanedArticle, { merge: true }), 3500);
       return true;
     } catch (err) {
       console.info('Firestore article sync deferred, saved locally:', err);
@@ -799,8 +763,7 @@ export async function saveNewsArticle(article: NewsArticle): Promise<boolean> {
 }
 
 /**
- * SOFT DELETE: Mark news article as deleted: true with new updatedAt timestamp
- * (Never permanently delete documents from Firestore)
+ * Delete a news article from Firestore, Admin cache, and Public cache
  */
 export async function deleteNewsArticle(articleId: string): Promise<boolean> {
   try {
@@ -813,8 +776,6 @@ export async function deleteNewsArticle(articleId: string): Promise<boolean> {
     const pubFiltered = pubArticles.filter((a) => a.id !== articleId);
     const pubConfig = (await getCachedSchoolConfig('public')) || DEFAULT_SCHOOL_CONFIG;
     await saveToPublicCache(pubConfig, pubFiltered);
-
-    setLocalCacheSync(CACHE_KEYS.ARTICLES, pubFiltered);
   } catch (e) {
     console.error('Error deleting article locally', e);
   }
@@ -822,20 +783,9 @@ export async function deleteNewsArticle(articleId: string): Promise<boolean> {
   if (db && (typeof navigator === 'undefined' || navigator.onLine)) {
     try {
       const articleDoc = doc(db, 'news_articles', articleId);
-      // Soft Delete: set deleted: true and updatedAt: serverTimestamp()
-      await withTimeout(
-        setDoc(
-          articleDoc,
-          {
-            deleted: true,
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true }
-        ),
-        3500
-      );
+      await withTimeout(deleteDoc(articleDoc), 3500);
     } catch (err) {
-      console.info('Firestore article soft delete deferred, applied locally:', err);
+      console.info('Firestore article delete deferred, applied locally:', err);
     }
   }
 
@@ -1593,293 +1543,6 @@ export async function saveGTKSubmission(item: GTKItem): Promise<{ success: boole
     return {
       success: false,
       message: 'Terjadi kendala saat menyimpan biodata. Silakan coba kembali.',
-    };
-  }
-}
-
-export interface DeltaSyncResult {
-  success: boolean;
-  hasChanges: boolean;
-  configChanged: boolean;
-  articlesChanged: boolean;
-  updatedArticles: NewsArticle[];
-  newArticlesBuffered: NewsArticle[];
-  updatedArticlesInPlace: NewsArticle[];
-  deletedArticleIds: string[];
-  mergedArticles: NewsArticle[];
-  config: SchoolConfig | null;
-  newLastSync: number;
-  message: string;
-}
-
-/**
- * Delta Sync (Stale-While-Revalidate):
- * Background synchronization using Firestore delta query `where("updatedAt", ">", lastSync) + orderBy("updatedAt")`.
- * NO additional `where` filters are attached to ensure zero composite index requirements.
- * Filter soft-deleted docs (`deleted: true`) on the client side.
- */
-export async function fetchDeltaSync(
-  currentArticles: NewsArticle[],
-  forceFull = false
-): Promise<DeltaSyncResult> {
-  const lastSync = forceFull ? 0 : getLocalCacheSync<number>(CACHE_KEYS.LAST_SYNC, 0);
-  const now = Date.now();
-  const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-
-  // Fallback: 7-day automatic full re-sync
-  const isExpired7Days = lastSync > 0 && (now - lastSync > SEVEN_DAYS_MS);
-  const effectiveLastSync = isExpired7Days || forceFull ? 0 : lastSync;
-
-  if (!db || (typeof navigator !== 'undefined' && !navigator.onLine)) {
-    return {
-      success: false,
-      hasChanges: false,
-      configChanged: false,
-      articlesChanged: false,
-      updatedArticles: [],
-      newArticlesBuffered: [],
-      updatedArticlesInPlace: [],
-      deletedArticleIds: [],
-      mergedArticles: currentArticles,
-      config: null,
-      newLastSync: lastSync,
-      message: 'Mode offline',
-    };
-  }
-
-  try {
-    let articlesQuery;
-    const colRef = collection(db, 'news_articles');
-
-    if (effectiveLastSync > 0) {
-      // Query delta: where("updatedAt", ">", lastSync) + orderBy("updatedAt") ONLY
-      articlesQuery = query(
-        colRef,
-        where('updatedAt', '>', Timestamp.fromMillis(effectiveLastSync)),
-        orderBy('updatedAt', 'asc')
-      );
-    } else {
-      articlesQuery = colRef;
-    }
-
-    const configDocRef = doc(db, 'school_portal', 'main_config');
-
-    const [articlesSnap, configSnap] = await Promise.all([
-      withTimeout(getDocs(articlesQuery), 4000).catch(() => null),
-      withTimeout(getDoc(configDocRef), 4000).catch(() => null),
-    ]);
-
-    let maxUpdatedAt = effectiveLastSync;
-    const updatedArticlesInPlace: NewsArticle[] = [];
-    const newArticlesBuffered: NewsArticle[] = [];
-    const deletedArticleIds: string[] = [];
-
-    const existingMap = new Map<string, NewsArticle>(currentArticles.map((a) => [a.id, a]));
-    let articlesChanged = false;
-
-    if (articlesSnap && !articlesSnap.empty) {
-      articlesSnap.forEach((docSnap) => {
-        const raw = docSnap.data();
-        const docData = raw as NewsArticle;
-
-        let docUpdatedAt = effectiveLastSync;
-        if (raw.updatedAt?.toMillis) {
-          docUpdatedAt = raw.updatedAt.toMillis();
-        } else if (typeof raw.updatedAt === 'number') {
-          docUpdatedAt = raw.updatedAt;
-        } else if (typeof raw.updatedAt === 'string') {
-          docUpdatedAt = new Date(raw.updatedAt).getTime() || Date.now();
-        }
-
-        if (docUpdatedAt > maxUpdatedAt) {
-          maxUpdatedAt = docUpdatedAt;
-        }
-
-        const articleItem: NewsArticle = {
-          ...docData,
-          id: docSnap.id,
-          updatedAt: docUpdatedAt,
-        };
-
-        // Client-side soft delete handling
-        if (raw.deleted === true) {
-          deletedArticleIds.push(docSnap.id);
-          if (existingMap.has(docSnap.id)) {
-            existingMap.delete(docSnap.id);
-            articlesChanged = true;
-          }
-        } else {
-          if (existingMap.has(docSnap.id)) {
-            // Updated in place quietly
-            existingMap.set(docSnap.id, articleItem);
-            updatedArticlesInPlace.push(articleItem);
-            articlesChanged = true;
-          } else {
-            if (effectiveLastSync > 0) {
-              // Brand new article -> Buffer it
-              newArticlesBuffered.push(articleItem);
-              articlesChanged = true;
-            } else {
-              // Full sync -> Include directly
-              existingMap.set(docSnap.id, articleItem);
-              articlesChanged = true;
-            }
-          }
-        }
-      });
-    }
-
-    const mergedArticles: NewsArticle[] = [];
-    currentArticles.forEach((a) => {
-      if (!deletedArticleIds.includes(a.id) && existingMap.has(a.id)) {
-        mergedArticles.push(existingMap.get(a.id)!);
-      }
-    });
-
-    existingMap.forEach((art, id) => {
-      if (!mergedArticles.some((m) => m.id === id)) {
-        mergedArticles.push(art);
-      }
-    });
-
-    let newConfig: SchoolConfig | null = null;
-    let configChanged = false;
-
-    if (configSnap && configSnap.exists()) {
-      const cfgData = configSnap.data();
-      let cfgUpdatedAt = 0;
-      if (cfgData.updatedAt?.toMillis) {
-        cfgUpdatedAt = cfgData.updatedAt.toMillis();
-      } else if (typeof cfgData.updatedAt === 'number') {
-        cfgUpdatedAt = cfgData.updatedAt;
-      }
-
-      const configLastSync = getLocalCacheSync<number>(CACHE_KEYS.CONFIG_LAST_SYNC, 0);
-      if (cfgUpdatedAt > configLastSync || effectiveLastSync === 0) {
-        newConfig = normalizeSchoolConfig(cfgData as SchoolConfig);
-        configChanged = true;
-        setLocalCacheSync(CACHE_KEYS.CONFIG_LAST_SYNC, cfgUpdatedAt > 0 ? cfgUpdatedAt : now);
-      }
-    }
-
-    const finalLastSync = maxUpdatedAt > lastSync ? maxUpdatedAt : (lastSync > 0 ? lastSync : now);
-    setLocalCacheSync(CACHE_KEYS.LAST_SYNC, finalLastSync);
-
-    const hasChanges = configChanged || articlesChanged;
-
-    if (hasChanges) {
-      if (newConfig) {
-        setLocalCacheSync(CACHE_KEYS.CONFIG, newConfig);
-      }
-      setLocalCacheSync(CACHE_KEYS.ARTICLES, mergedArticles);
-    }
-
-    return {
-      success: true,
-      hasChanges,
-      configChanged,
-      articlesChanged,
-      updatedArticles: [...updatedArticlesInPlace, ...newArticlesBuffered],
-      newArticlesBuffered,
-      updatedArticlesInPlace,
-      deletedArticleIds,
-      mergedArticles,
-      config: newConfig,
-      newLastSync: finalLastSync,
-      message: hasChanges ? 'Sinkronisasi delta berhasil' : 'Tidak ada perubahan',
-    };
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.warn('[Firebase] Delta sync error:', msg);
-    return {
-      success: false,
-      hasChanges: false,
-      configChanged: false,
-      articlesChanged: false,
-      updatedArticles: [],
-      newArticlesBuffered: [],
-      updatedArticlesInPlace: [],
-      deletedArticleIds: [],
-      mergedArticles: currentArticles,
-      config: null,
-      newLastSync: lastSync,
-      message: `Delta sync error: ${msg}`,
-    };
-  }
-}
-
-/**
- * Migration tool for Super Admin:
- * Batched update adding `updatedAt` timestamp to legacy documents in Firestore that lack it.
- */
-export async function migrateLegacyDataWithUpdatedAt(): Promise<{
-  success: boolean;
-  migratedArticlesCount: number;
-  configMigrated: boolean;
-  message: string;
-}> {
-  if (!db) {
-    return {
-      success: false,
-      migratedArticlesCount: 0,
-      configMigrated: false,
-      message: 'Database Firestore tidak terhubung',
-    };
-  }
-
-  try {
-    const batch = writeBatch(db);
-    let count = 0;
-    let configMigrated = false;
-
-    // 1. Articles migration
-    const articlesCol = collection(db, 'news_articles');
-    const articlesSnap = await getDocs(articlesCol);
-
-    articlesSnap.forEach((d) => {
-      const data = d.data();
-      if (!data.updatedAt) {
-        batch.update(d.ref, {
-          updatedAt: serverTimestamp(),
-          deleted: Boolean(data.deleted),
-        });
-        count++;
-      }
-    });
-
-    // 2. Config migration
-    const configDocRef = doc(db, 'school_portal', 'main_config');
-    const configSnap = await getDoc(configDocRef);
-    if (configSnap.exists() && !configSnap.data().updatedAt) {
-      batch.update(configDocRef, {
-        updatedAt: serverTimestamp(),
-      });
-      configMigrated = true;
-    }
-
-    if (count > 0 || configMigrated) {
-      await batch.commit();
-      return {
-        success: true,
-        migratedArticlesCount: count,
-        configMigrated,
-        message: `Berhasil migrasi ${count} dokumen berita dan konfigurasi dengan field updatedAt.`,
-      };
-    } else {
-      return {
-        success: true,
-        migratedArticlesCount: 0,
-        configMigrated: false,
-        message: 'Semua data Firestore sudah memiliki field updatedAt.',
-      };
-    }
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return {
-      success: false,
-      migratedArticlesCount: 0,
-      configMigrated: false,
-      message: `Gagal melakukan migrasi data: ${msg}`,
     };
   }
 }

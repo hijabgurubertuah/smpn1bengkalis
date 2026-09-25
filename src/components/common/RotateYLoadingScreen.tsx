@@ -18,11 +18,6 @@ export const RotateYLoadingScreen: React.FC<RotateYLoadingScreenProps> = ({
   useEffect(() => {
     if (isVisible) {
       setShouldRender(true);
-      // Hard watchdog timeout: Never stay stuck for more than 2 seconds under any circumstance
-      const safetyTimer = setTimeout(() => {
-        setShouldRender(false);
-      }, 2000);
-      return () => clearTimeout(safetyTimer);
     } else {
       const timer = setTimeout(() => setShouldRender(false), 300);
       return () => clearTimeout(timer);
